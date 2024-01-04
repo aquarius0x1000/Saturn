@@ -1,4 +1,6 @@
 #include "src/aquarius.h"
+#include "src/deimos.h"
+#include "src/prometheus.h"
 
 AQAny test_malloc(AQAny allocation_data, AQULong size_in_bytes) {
     puts("Hello from the world!!!!!!!!!");
@@ -264,6 +266,48 @@ void test_aquarius(void) {
         loop++;
     }
     printf("%s\n", "Hello World!!!");
+    
+    DeimosFile file = deimos_open_file("TEST.pro",DeimosWriteModeFlag);
+    
+    AQStore store99 = aqstore_new();
+    AQArray array99 = aqarray_new();
+    AQMultiTypeArray mta99 = aqmta_new();
+    AQMultiTypeArray mta100 = aqmta_new();
+    
+    aq_mta_add_item(AQInt,mta99,42);
+    aq_mta_add_item(AQInt,mta99,958754);
+    aq_mta_add_item(AQInt,mta99,255);
+    
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,0));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,1));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,2));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,0));
+    
+    aqmta_iterate_all_types_with(test_mta,mta99);
+    
+    aq_mta_add_item(AQInt,mta100,420);
+    aq_mta_add_item(AQInt,mta100,9587540);
+    aq_mta_add_item(AQInt,mta100,2550);
+    
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta100,0));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta100,1));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta100,2));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta100,0));
+    
+    
+    aqarray_add_item(array99,mta99);
+    aqarray_add_item(array99,mta100);
+    
+    aqstore_add_item(store99,array99,"TESTDATA");
+    
+    prometheus_output_file(file,store99);
+    
+    aqmta_destroy(mta99);
+    aqmta_destroy(mta100);
+    aqarray_destroy(array99);
+    aqstore_destroy(store99);
+    
+    deimos_close_file(file);
 }
 
 int main(int argc, const char **argv) {

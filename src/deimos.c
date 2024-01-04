@@ -69,6 +69,22 @@ AQInt deimos_set_file_position(DeimosFile file, AQULong position) {
     return !deimos_fseek(file->file,position,SEEK_SET);
 }
 
+AQInt deimos_output_character(DeimosFile file, AQInt value) {
+    return fputc(value,file->file);
+}
+
+AQInt deimos_output_string(DeimosFile file, AQChar* value) {
+    return fprintf(file->file,"%s",value);
+}
+
+AQInt deimos_output_integer(DeimosFile file, AQInt value) {
+    return fprintf(file->file,"%d",value);
+}
+
+AQInt deimos_output_float(DeimosFile file, AQFloat value) {
+    return fprintf(file->file,"%f",value);
+}
+
 static AQUInt deimos_internal_get_32bit_int(FILE* file, AQInt* error) {
     static AQUInt table[] = {1,256,65536,16777216};
     AQInt i = 0;
@@ -108,7 +124,7 @@ static AQInt deimos_internal_set_32bit_int(FILE* file, AQUInt num) {
     while ( i < 4 ) {
         error = putc(array[i],file);
         if (error == EOF) break;
-        i++ ;
+        i++;
     }
     return (error < 0) ? 1 : 0;
 }

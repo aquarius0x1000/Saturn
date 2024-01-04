@@ -25,12 +25,12 @@
 typedef float AQFloat;
 typedef double AQDouble;
 typedef char AQChar;
-typedef unsigned char AQByte ;
-typedef signed char AQSByte ;
-typedef signed short AQShort ;
-typedef unsigned short AQUShort ;
-typedef signed int AQInt ;
-typedef unsigned int AQUInt ;
+typedef unsigned char AQByte;
+typedef signed char AQSByte;
+typedef signed short AQShort;
+typedef unsigned short AQUShort;
+typedef signed int AQInt;
+typedef unsigned int AQUInt;
 
 #ifdef _WIN32
  typedef signed long long AQLong ;
@@ -121,9 +121,11 @@ typedef enum {
   AQStackBufferFlag,
   AQMultiTypeArrayFlag,
   AQMTAStackBufferFlag,
+  AQMTAContainerFlag,
   AQStoreFlag,
 } AQDataStructureFlag;
 
+typedef struct AQDataStructure_s* AQDataStructure;
 typedef struct AQArray_s* AQArray;
 typedef struct AQString_s* AQString;
 typedef struct AQListNode_s* AQListNode;
@@ -136,6 +138,7 @@ typedef struct AQStore_s* AQStore;
 typedef void* AQAny;
 
 typedef struct {
+  AQDataStructureFlag flag;  
   AQTypeFlag type;
     union {
       AQByte AQByteVal;
@@ -198,7 +201,8 @@ AQAny aqmem_realloc(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes);
 AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes, AQAllocator allocator);
-    
+
+AQDataStructureFlag aqdatastructure_get_flag(AQDataStructure datastructure);        
     
 #define aq_new_array(...) _Generic((__VA_ARGS__), \
   default: aqarray_new, \

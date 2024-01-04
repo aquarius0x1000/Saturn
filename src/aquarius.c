@@ -1,5 +1,9 @@
 #include "aquarius.h"
 
+struct AQDataStructure_s {
+  AQDataStructureFlag flag;
+};
+
 struct AQArray_s {
   AQDataStructureFlag flag;
   AQAllocator allocator;  
@@ -129,6 +133,10 @@ AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
             return data;
         }
     }
+}
+
+AQDataStructureFlag aqdatastructure_get_flag(AQDataStructure datastructure) {
+    return datastructure->flag;
 }
 
 AQArray aqarray_new(void) {
@@ -1339,6 +1347,7 @@ AQULong aqmta_get_num_of_items_all_types(AQMultiTypeArray mta) {
 AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index) {
     int i = 0;
     AQMTAContainer container;
+    container.flag = AQMTAContainerFlag;
     while (i < 11) {
         if (index >= mta->num_of_items[i]) {
             index = index - mta->num_of_items[i];
