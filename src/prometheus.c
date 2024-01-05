@@ -52,6 +52,12 @@ static void pro_output_block(DeimosFile file,
             );
            }
     }
+    if (flag == AQStringFlag) {
+        deimos_output_character(file,'"');
+        deimos_output_string(file,aqstring_get_c_string((AQString)data));
+        deimos_output_character(file,'"');
+        deimos_output_character(file,'\n');
+    }
     deimos_output_character(file,'}');
     deimos_output_character(file,';'); 
     deimos_output_character(file,'\n');     
@@ -73,7 +79,9 @@ static AQInt pro_output_container(DeimosFile file,
     if (flag == AQArrayFlag)
        deimos_output_string(file,"@Array");
     if (flag == AQStoreFlag)
-       deimos_output_string(file,"@Store");   
+       deimos_output_string(file,"@Store");
+    if (flag == AQStringFlag)
+       deimos_output_string(file,"@Text");       
     deimos_output_character(file,']'); 
     deimos_output_character(file,' ');
     deimos_output_character(file,':');

@@ -233,7 +233,7 @@ void aqarray_iterate_with(AQIteratorFuncType iterator, AQArray array);
 #define aq_new_string(...) _Generic((__VA_ARGS__), \
   default: aqstring_new_from_buffer, \
   AQAllocator: aqstring_new_from_buffer_with_allocator \
-)(__VA_ARGS__)
+)(__VA_ARGS__,sizeof(__VA_ARGS__))
 #define aq_add_strings(...) _Generic((__VA_ARGS__), \
   default: aqstring_new_from_two_strings, \
   AQAllocator: aqstring_new_from_two_strings_with_allocator \

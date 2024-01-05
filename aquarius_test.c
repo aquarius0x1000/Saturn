@@ -273,6 +273,7 @@ void test_aquarius(void) {
     AQArray array99 = aqarray_new();
     AQMultiTypeArray mta99 = aqmta_new();
     AQMultiTypeArray mta100 = aqmta_new();
+    AQString string99 = aqstr("Hello World!!!!");
     
     aq_mta_add_item(AQInt,mta99,42);
     aq_mta_add_item(AQInt,mta99,958754);
@@ -297,11 +298,13 @@ void test_aquarius(void) {
     
     aqarray_add_item(array99,mta99);
     aqarray_add_item(array99,mta100);
+    aqarray_add_item(array99,string99);
     
     aqstore_add_item(store99,array99,"TESTDATA");
     
     prometheus_output_file(file,store99);
     
+    aqstring_destroy(string99);
     aqmta_destroy(mta99);
     aqmta_destroy(mta100);
     aqarray_destroy(array99);
