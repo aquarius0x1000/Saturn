@@ -230,14 +230,14 @@ AQULong aqarray_get_num_of_items(AQArray array);
 void aqarray_iterate_with(AQIteratorFuncType iterator, AQArray array);
  
  
-#define aq_new_string(...) _Generic((__VA_ARGS__), \
+#define aq_new_string(string,...) _Generic((string __VA_OPT__(,) __VA_ARGS__), \
   default: aqstring_new_from_buffer, \
   AQAllocator: aqstring_new_from_buffer_with_allocator \
-)(__VA_ARGS__,sizeof(__VA_ARGS__))
-#define aq_add_strings(...) _Generic((__VA_ARGS__), \
+)(string, sizeof(string) __VA_OPT__(,) __VA_ARGS__)
+#define aq_add_strings(a, b,...) _Generic((a,b __VA_OPT__(,) __VA_ARGS__), \
   default: aqstring_new_from_two_strings, \
   AQAllocator: aqstring_new_from_two_strings_with_allocator \
-)(__VA_ARGS__)
+)(a, b __VA_OPT__(,) __VA_ARGS__)
 #define aqstr(string,...) aq_new_string(string __VA_OPT__(,) __VA_ARGS__)
 #define aqstrU8(string,...) aq_new_string(u8##string __VA_OPT__(,) __VA_ARGS__)
 #define aqstrfree(string) aqstring_destroy(string)

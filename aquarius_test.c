@@ -273,8 +273,7 @@ void test_aquarius(void) {
     AQArray array99 = aqarray_new();
     AQMultiTypeArray mta99 = aqmta_new();
     AQMultiTypeArray mta100 = aqmta_new();
-    AQString string99 = aqstr("Hello World!!!!");
-    
+    AQString string99 = aqstr("Hello World!!!!",&allocator);
     aq_mta_add_item(AQInt,mta99,42);
     aq_mta_add_item(AQInt,mta99,958754);
     aq_mta_add_item(AQInt,mta99,255);
