@@ -35,6 +35,7 @@ static void pro_output_block(DeimosFile file,
     }    
     deimos_output_character(file,'{');
     deimos_output_character(file,'\n');
+    deimos_output_add_to_tab(file,1);
     if (flag == AQArrayFlag) {
         aq_array_foreach(index,(AQArray)data) {
             pro_output_container(file,
@@ -53,11 +54,14 @@ static void pro_output_block(DeimosFile file,
            }
     }
     if (flag == AQStringFlag) {
+        deimos_output_tab(file);
         deimos_output_character(file,'"');
         deimos_output_string(file,aqstring_get_c_string((AQString)data));
         deimos_output_character(file,'"');
         deimos_output_character(file,'\n');
     }
+    deimos_output_sub_from_tab(file,1);
+    deimos_output_tab(file);
     deimos_output_character(file,'}');
     deimos_output_character(file,';'); 
     deimos_output_character(file,'\n');     
@@ -66,7 +70,8 @@ static void pro_output_block(DeimosFile file,
 static AQInt pro_output_container(DeimosFile file,
      AQDataStructure data, AQChar* label) {
     if (data == NULL) return 0;
-    AQDataStructureFlag flag = aqdatastructure_get_flag(data);     
+    AQDataStructureFlag flag = aqdatastructure_get_flag(data);
+    deimos_output_tab(file);  
     deimos_output_character(file,'[');
     if (label != NULL) {
         deimos_output_string(file,label);

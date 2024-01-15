@@ -5,6 +5,7 @@
 #endif
 
 struct DeimosFile_s { 
+  AQInt tab;  
   FILE* file;
   DeimosFileModeFlag mode; 
 };
@@ -49,6 +50,7 @@ DeimosFile deimos_open_file(const AQChar* filepath, DeimosFileModeFlag mode) {
     if ( mode == DeimosReadModeFlag ) file->file = fopen(filepath, "r");
     if ( mode == DeimosWriteModeFlag ) file->file = fopen(filepath, "w");
     file->mode = mode;
+    file->tab = 0;
     return file;
 }
 
@@ -67,6 +69,23 @@ AQULong deimos_get_file_position(DeimosFile file) {
 
 AQInt deimos_set_file_position(DeimosFile file, AQULong position) {
     return !deimos_fseek(file->file,position,SEEK_SET);
+}
+
+AQInt deimos_output_add_to_tab(DeimosFile file, AQInt value) {
+    return file->tab += value;
+}
+
+AQInt deimos_output_sub_from_tab(DeimosFile file, AQInt value) {
+    return file->tab -= value;
+}
+
+AQInt deimos_output_tab(DeimosFile file) {
+    AQInt i = file->tab;
+    while (i > 0) {
+        fputc('\t',file->file);
+        i--;
+    } 
+  return 1;
 }
 
 AQInt deimos_output_character(DeimosFile file, AQInt value) {
