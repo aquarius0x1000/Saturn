@@ -277,6 +277,8 @@ void test_aquarius(void) {
     aq_mta_add_item(AQInt,mta99,42);
     aq_mta_add_item(AQInt,mta99,958754);
     aq_mta_add_item(AQInt,mta99,255);
+    aq_mta_add_item(AQFloat,mta99,255.0255f);
+    aq_mta_add_item(AQDouble,mta99,255.000255);
     
     printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,0));
     printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,1));
@@ -285,6 +287,7 @@ void test_aquarius(void) {
     
     aqmta_iterate_all_types_with(test_mta,mta99);
     
+    aq_mta_add_item(AQByte,mta100,255);
     aq_mta_add_item(AQInt,mta100,420);
     aq_mta_add_item(AQInt,mta100,9587540);
     aq_mta_add_item(AQInt,mta100,2550);

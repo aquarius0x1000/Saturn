@@ -96,12 +96,44 @@ AQInt deimos_output_string(DeimosFile file, AQChar* value) {
     return fprintf(file->file,"%s",value);
 }
 
+AQInt deimos_output_byte(DeimosFile file, AQByte value) {
+    return fprintf(file->file,"%hhu",value);
+}
+
+AQInt deimos_output_sbyte(DeimosFile file, AQSByte value) {
+    return fprintf(file->file,"%hhd",value);
+}
+
+AQInt deimos_output_short(DeimosFile file, AQShort value) {
+    return fprintf(file->file,"%hd",value);
+}
+
+AQInt deimos_output_ushort(DeimosFile file, AQUShort value) {
+    return fprintf(file->file,"%hu",value);
+}
+
 AQInt deimos_output_integer(DeimosFile file, AQInt value) {
     return fprintf(file->file,"%d",value);
 }
 
+AQInt deimos_output_uinteger(DeimosFile file, AQUInt value) {
+    return fprintf(file->file,"%u",value);
+}
+
+AQInt deimos_output_long(DeimosFile file, AQLong value) {
+    return fprintf(file->file,"%l",value);
+}
+
+AQInt deimos_output_ulong(DeimosFile file, AQULong value) {
+    return fprintf(file->file,"%lu",value);
+}
+
 AQInt deimos_output_float(DeimosFile file, AQFloat value) {
     return fprintf(file->file,"%f",value);
+}
+
+AQInt deimos_output_double(DeimosFile file, AQDouble value) {
+    return fprintf(file->file,"%lf",value);
 }
 
 static AQUInt deimos_internal_get_32bit_int(FILE* file, AQInt* error) {
