@@ -4,16 +4,16 @@
 
 Saturn as of now consists of :
 
- aquarius - Basic data structure and math library.
+  aquarius - Basic data structure and math library.
 
- deimos - Very basic file I/O, and management library. 
+  deimos - Very basic file I/O, and management library. 
 
 Work in progress:
 
- prometheus - Serialization and  deserialization library.
+  prometheus - Serialization and  deserialization library. 
 
 Planned for the future:
 
- hermes - Lexer and parser framework.
+  hermes - Lexer and parser framework.
 
- pluto -  A scripting language.
+  pluto -  A scripting language.
