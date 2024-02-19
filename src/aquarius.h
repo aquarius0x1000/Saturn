@@ -3,11 +3,13 @@
 
 #include <math.h>
 #include <time.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
 #include <string.h>
+#include <inttypes.h>
 
 #ifdef __GNUC__
  #pragma GCC diagnostic ignored "-Wunused-value"
@@ -202,7 +204,7 @@ AQAny aqmem_realloc(AQAny data, AQULong newsize,
 AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes, AQAllocator allocator);
 
-AQDataStructureFlag aqdatastructure_get_flag(AQDataStructure datastructure);        
+AQDataStructureFlag aqds_get_flag(AQDataStructure ds);        
     
 #define aq_new_array(...) _Generic((__VA_ARGS__), \
   default: aqarray_new, \
@@ -242,6 +244,10 @@ void aqarray_iterate_with(AQIteratorFuncType iterator, AQArray array);
 #define aqstrU8(string,...) aq_new_string(u8##string __VA_OPT__(,) __VA_ARGS__)
 #define aqstrfree(string) aqstring_destroy(string)
 #define aqstrprint(string) aqstring_print(string)
+#define aq_string_for_each_byte(index,string)\
+ for (AQULong index = 0; index < aqstring_get_size_in_bytes(string); index++)
+#define aq_string_for_each_character(index,string)\
+ for (AQULong index = 0; index < aqstring_get_length(string); index++) 
 
 AQString aqstring_new(AQULong size_in_bytes);
 AQString aqstring_new_with_allocator(AQULong size_in_bytes, AQAllocator allocator);
@@ -273,6 +279,8 @@ void aqstring_print(AQString string);
 AQUInt* aqstring_get_utf32_string(AQString string, AQULong* length);
 AQString aqstring_get_string_for_ascii(AQString string);
 AQString aqstring_swap_escape_sequences_with_characters(AQString string);
+void aqstring_iterate_bytes_with(AQIteratorFuncType iterator, AQString string);
+void aqstring_iterate_characters_with(AQIteratorFuncType iterator, AQString string);
 
 
 #define aq_new_list(...) _Generic((__VA_ARGS__), \

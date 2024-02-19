@@ -278,7 +278,7 @@ void test_aquarius(void) {
     aq_mta_add_item(AQInt,mta99,958754);
     aq_mta_add_item(AQInt,mta99,255);
     aq_mta_add_item(AQFloat,mta99,255.0255f);
-    aq_mta_add_item(AQDouble,mta99,255.000255);
+    aq_mta_add_item(AQDouble,mta99,255.0255);
     
     printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,0));
     printf("MTA: %d\n",aq_mta_get_item(AQInt,mta99,1));

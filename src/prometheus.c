@@ -40,6 +40,8 @@ static void pro_output_list(DeimosFile file,
             case AQDoubleFlag:
               deimos_output_double(file,container->AQDoubleVal);
             break;
+            default:
+            break;
         }
     }
     if (flag == AQMultiTypeArrayFlag) {
@@ -119,9 +121,7 @@ static void pro_output_block(DeimosFile file,
         output_values_for_type(AQLong)
         output_values_for_type(AQULong)
         output_values_for_type(AQFloat)
-        output_values_for_type(AQDouble)                             
-                  
-                  
+        output_values_for_type(AQDouble)                                     
     }
     deimos_output_sub_from_tab(file,1);
     deimos_output_tab(file);
@@ -134,7 +134,7 @@ static AQInt pro_output_container(DeimosFile file,
      AQDataStructure data, AQChar* label, 
      AQTypeFlag flag_type_for_values) {
     if (data == NULL) return 0;
-    AQDataStructureFlag flag = aqdatastructure_get_flag(data);
+    AQDataStructureFlag flag = aqds_get_flag(data);
     deimos_output_tab(file);  
     deimos_output_character(file,'[');
     if (label != NULL) {
@@ -173,6 +173,8 @@ static AQInt pro_output_container(DeimosFile file,
               break;
               case AQDoubleFlag:
                 deimos_output_string(file,"@Double");
+              break;
+              default:
               break;
         }
     }
@@ -216,6 +218,8 @@ static AQInt pro_output_container(DeimosFile file,
               case AQDoubleFlag:
                 deimos_output_string(file,"@Doubles");
               break;
+              default:
+              break;
           }
     }     
     deimos_output_character(file,']'); 
@@ -228,4 +232,119 @@ static AQInt pro_output_container(DeimosFile file,
 
 AQInt prometheus_output_file(DeimosFile file, AQDataStructure data) {
     return pro_output_container(file,data,NULL,AQEmptyFlag);
+}
+
+static AQInt pro_validate_name(AQString name) {
+  aq_string_for_each_character(index,name) {
+    AQULong offset = 0;
+    AQInt character = 
+     aqstring_get_character(name,index,&offset);
+     if (!isdigit(character) &&
+        !isalpha(character)) return 0;
+    index += offset;
+  }
+  return 1;
+}
+
+static AQDataStructure prometheus_get_container(DeimosFile file, AQDataStructure sds);
+
+typedef AQDataStructure (*pro_get_block_type)(DeimosFile file,
+   AQTypeFlag flag_type_for_ds, AQDataStructure sds);
+
+#define pro_define_get_value(main_type,aq_type)\       
+ static AQDataStructure pro_get_value_##main_type(DeimosFile file,\
+    AQTypeFlag flag_type_for_ds, AQDataStructure sds) {\
+     AQULong offset;\
+     if (deimos_peek_utf32_character(file,&offset) == ':') {\
+         deimos_advance_file_position(file,offset);\
+         if (deimos_peek_utf32_character(file,&offset) == '(') {\
+             deimos_advance_file_position(file,offset);\
+             aq_type value = deimos_get_##main_type(file);\
+             if (deimos_peek_utf32_character(file,&offset) == ';') {\
+                 deimos_advance_file_position(file,offset);\
+                 AQMTAContainer* mta_container = aq_new(AQMTAContainer);\
+                 mta_container->flag = AQMTAContainerFlag;\
+                 mta_container->type = aq_type##Flag;\
+                 mta_container->AQIntVal = value;\
+                 return (AQDataStructure)mta_container;\
+             }\
+         }\  
+     }\
+     return NULL;\
+  }
+  
+pro_define_get_value(byte,AQByte);
+pro_define_get_value(sbyte,AQSByte);
+pro_define_get_value(short,AQShort);
+pro_define_get_value(ushort,AQUShort);
+pro_define_get_value(integer,AQInt);
+pro_define_get_value(uinteger,AQUInt);
+pro_define_get_value(long,AQLong);
+pro_define_get_value(ulong,AQULong);
+pro_define_get_value(float,AQFloat);
+pro_define_get_value(double,AQDouble);
+
+#define pro_define_get_values(main_type,aq_type)\
+ static AQDataStructure pro_get_values_##main_type(DeimosFile file,\
+    AQTypeFlag flag_type_for_ds, AQDataStructure sds) {\
+     AQULong offset;\
+     AQInt character;\
+     if (deimos_peek_utf32_character(file,&offset) == ':') {\
+         deimos_advance_file_position(file,offset);\
+         if (deimos_peek_utf32_character(file,&offset) == '(') {\
+             deimos_advance_file_position(file,offset);\
+           loop:\
+             aq_type value = deimos_get_##main_type(file);\
+             character = deimos_peek_last_utf32_character(file,0);\
+             if (character == ',' || character == ')') {\
+                 aq_mta_add_item(aq_type,sds,value);\
+                 if (character == ',') goto loop;\
+                 if (deimos_peek_utf32_character(file,&offset) == ';') {\
+                    deimos_advance_file_position(file,offset);\ 
+                    return sds;\ 
+                 }\
+             }\
+         }\
+     }\
+     return NULL;\
+ }\
+ 
+ 
+pro_define_get_values(byte,AQByte);
+pro_define_get_values(sbyte,AQSByte);
+pro_define_get_values(short,AQShort);
+pro_define_get_values(ushort,AQUShort);
+pro_define_get_values(integer,AQInt);
+pro_define_get_values(uinteger,AQUInt);
+pro_define_get_values(long,AQLong);
+pro_define_get_values(ulong,AQULong);
+pro_define_get_values(float,AQFloat);
+pro_define_get_values(double,AQDouble);
+
+static AQDataStructure pro_get_string(DeimosFile file,
+    AQTypeFlag flag_type_for_ds, AQDataStructure sds) {
+    AQULong offset;  
+    if (deimos_peek_utf32_character(file,&offset) == ':') {
+         deimos_advance_file_position(file,offset);
+         if (deimos_peek_utf32_character(file,&offset) == '{') {
+             AQString string = deimos_get_string(file,'"','"');
+             if (deimos_peek_utf32_character(file,&offset) == '}') {
+                 deimos_advance_file_position(file,offset);
+                 if (deimos_peek_utf32_character(file,&offset) == ';') { 
+                    deimos_advance_file_position(file,offset);
+                    return (AQDataStructure)string;
+             }   }
+         }
+    }
+}
+
+static AQDataStructure prometheus_get_container(DeimosFile file, AQDataStructure sds) {
+  //init dispactch
+  //parse [name,type], use get_string, peek, and sds(super data structure)
+  //parse block, via dispactch
+  return NULL;
+}
+
+AQDataStructure prometheus_load_file(DeimosFile file) {
+    //return pro_get_container(file,NULL);
 }

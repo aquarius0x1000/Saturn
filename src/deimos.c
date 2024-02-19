@@ -71,6 +71,113 @@ AQInt deimos_set_file_position(DeimosFile file, AQULong position) {
     return !deimos_fseek(file->file,position,SEEK_SET);
 }
 
+AQInt deimos_advance_file_position(DeimosFile file, AQULong offset) {
+    return deimos_set_file_position(file,
+        deimos_get_file_position(file)+offset);
+}
+
+AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end) {
+    AQInt character = 0;
+    AQInt has_started = 0;
+    AQInt* string = NULL;
+    AQULong num_of_characters = 0;
+    while ((character = deimos_get_utf32_character(file)) != EOF) {
+        if (character == start) has_started++;
+        if (character == start) continue;
+        if (!has_started) continue;
+        if (character == end) break;
+        num_of_characters++;
+        if (string == NULL) string = aq_make_c_array(num_of_characters, AQInt);
+        if (string != NULL) string = aq_realloc(string, num_of_characters,
+                num_of_characters-1, AQInt, 1);
+        string[num_of_characters-1] = character;     
+    }
+    AQString ret_string = aqstring_new_from_utf32((AQUInt*)string,num_of_characters);
+    free(string);
+    return ret_string;
+}
+
+static AQString deimos_get_number(DeimosFile file) {
+    AQInt character = 0;
+    AQInt found_numbers = 0;
+    AQInt* string = NULL;
+    AQULong num_of_characters = 0;
+    while ((character = deimos_get_utf32_character(file)) != EOF) {
+        if (isdigit(character)) found_numbers++;
+        if (!found_numbers) continue;
+        if (!isdigit(character)) break;
+        num_of_characters++;
+        if (string == NULL) string = aq_make_c_array(num_of_characters, AQInt);
+        if (string != NULL) string = aq_realloc(string, num_of_characters,
+                num_of_characters-1, AQInt, 1);
+        string[num_of_characters-1] = character;     
+    }
+    AQString ret_string = aqstring_new_from_utf32((AQUInt*)string,num_of_characters);
+    free(string);
+    return ret_string;
+}
+
+static AQLong deimos_get_signed(DeimosFile file) {
+    AQString string = deimos_get_number(file);
+    AQLong value = strtoimax(aqstring_get_c_string(string),NULL,10);
+    aqstring_destroy(string);
+    return value;
+}
+
+static AQULong deimos_get_unsigned(DeimosFile file) {
+    AQString string = deimos_get_number(file);
+    AQULong value = strtoumax(aqstring_get_c_string(string),NULL,10);
+    aqstring_destroy(string);
+    return value;
+}
+
+static AQDouble deimos_get_floating_point(DeimosFile file) {
+    AQString string = deimos_get_number(file);
+    AQDouble value = strtod(aqstring_get_c_string(string),NULL);
+    aqstring_destroy(string);
+    return value;
+}
+
+AQByte deimos_get_byte(DeimosFile file) {
+    return deimos_get_unsigned(file);
+}
+
+AQSByte deimos_get_sbyte(DeimosFile file) {
+    return deimos_get_signed(file);
+}
+
+AQShort deimos_get_short(DeimosFile file) {
+    return deimos_get_signed(file);
+}
+
+AQUShort deimos_get_ushort(DeimosFile file) {
+    return deimos_get_unsigned(file);
+}
+
+AQInt deimos_get_integer(DeimosFile file) {
+    return deimos_get_signed(file);
+}
+
+AQUInt deimos_get_uinteger(DeimosFile file) {
+    return deimos_get_unsigned(file);
+}
+
+AQLong deimos_get_long(DeimosFile file) {
+    return deimos_get_signed(file);
+}
+
+AQULong deimos_get_ulong(DeimosFile file) {
+    return deimos_get_unsigned(file);
+}
+
+AQFloat deimos_get_float(DeimosFile file) {
+    return deimos_get_floating_point(file);
+}
+
+AQDouble deimos_get_double(DeimosFile file) {
+    return deimos_get_floating_point(file);
+}
+
 AQInt deimos_output_add_to_tab(DeimosFile file, AQInt value) {
     return file->tab += value;
 }
@@ -121,7 +228,7 @@ AQInt deimos_output_uinteger(DeimosFile file, AQUInt value) {
 }
 
 AQInt deimos_output_long(DeimosFile file, AQLong value) {
-    return fprintf(file->file,"%l",value);
+    return fprintf(file->file,"%ld",value);
 }
 
 AQInt deimos_output_ulong(DeimosFile file, AQULong value) {
@@ -129,11 +236,15 @@ AQInt deimos_output_ulong(DeimosFile file, AQULong value) {
 }
 
 AQInt deimos_output_float(DeimosFile file, AQFloat value) {
-    return fprintf(file->file,"%f",value);
+    return fprintf(file->file,"%.*f",DECIMAL_DIG + 6,value);
 }
 
 AQInt deimos_output_double(DeimosFile file, AQDouble value) {
-    return fprintf(file->file,"%lf",value);
+    return fprintf(file->file,"%.*lf",DECIMAL_DIG + 6,value);
+}
+
+AQInt deimos_get_character(DeimosFile file) {
+    return deimos_get_utf32_character(file);
 }
 
 static AQUInt deimos_internal_get_32bit_int(FILE* file, AQInt* error) {
@@ -287,4 +398,21 @@ loop:
         value = byte0 | byte1 | byte2 | byte3;
     }
     return value;
+}
+
+AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset) {
+   AQULong file_position = deimos_get_file_position(file);
+   AQInt character = deimos_get_utf32_character(file);
+   *offset = deimos_get_file_position(file) - file_position;
+   deimos_set_file_position(file,file_position);
+   return character;
+}
+
+AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset) {
+   AQULong file_position = deimos_get_file_position(file);
+   AQULong last = file_position - (1+offset);
+   deimos_set_file_position(file,last);
+   AQInt character = deimos_get_utf32_character(file);
+   deimos_set_file_position(file,file_position);
+   return character;
 }

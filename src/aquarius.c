@@ -135,8 +135,8 @@ AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
     }
 }
 
-AQDataStructureFlag aqdatastructure_get_flag(AQDataStructure datastructure) {
-    return datastructure->flag;
+AQDataStructureFlag aqds_get_flag(AQDataStructure ds) {
+    return ds->flag;
 }
 
 AQArray aqarray_new(void) {
@@ -246,11 +246,11 @@ void* aqarray_get_item(AQArray array, AQULong index) {
 }
 
 AQInt aqarray_set_item(AQArray array, AQULong index, AQAny item) {
-  if ( index >= 0 && index < array->num_of_items ) {
-    array->items[index] = item;
-    return 1;
-  }
-  return 0;
+    if ( index >= 0 && index < array->num_of_items ) {
+        array->items[index] = item;
+        return 1;
+    }
+    return 0;
 }
 
 AQULong aqarray_get_num_of_items(AQArray array) {
@@ -258,11 +258,11 @@ AQULong aqarray_get_num_of_items(AQArray array) {
 }
 
 void aqarray_iterate_with(AQIteratorFuncType iterator, AQArray array) {
-  int i = 0;
-  while ( i < array->num_of_items ) {
-   iterator(array->items[i]);
-   i++;
-  }
+    int i = 0;
+    while ( i < array->num_of_items ) {
+        iterator(array->items[i]);
+        i++;
+    }
 }
 
 AQString aqstring_new(AQULong size_in_bytes) {
@@ -766,6 +766,25 @@ AQString aqstring_swap_escape_sequences_with_characters(AQString string) {
     retstring = aqstring_new_from_utf32_with_allocator(str, str_size, string->allocator);
     aq_free(str,string->allocator);
     return retstring;
+}
+
+void aqstring_iterate_bytes_with(AQIteratorFuncType iterator, AQString string) {
+    AQULong i = 0;
+    while ( i < string->size_in_bytes ) {
+        iterator(string->string[i]);
+        i++;
+  }
+}
+
+void aqstring_iterate_characters_with(AQIteratorFuncType iterator, AQString string) {
+    AQULong i = 0;
+    AQSByte offset = 0;
+    aqstring_get_length(string);
+    while ( i < string->size_in_characters ) {
+        iterator(aqstring_get_character(string,i,&offset));
+        i += offset;
+        i++;
+  }
 }
 
 AQList aqlist_new(void) {
