@@ -21,7 +21,7 @@ void test_mta(AQAny data) {
     if (iterator_item_AQByte == 255) puts("YES!!!!!255");
 }
 
-void test_aquarius(void) {
+void test_saturn(void) {
     AQArray array = aqarray_new();
     int number = 1;
     aqarray_add_item(array,aq_any(number));
@@ -316,5 +316,5 @@ void test_aquarius(void) {
 }
 
 int main(int argc, const char **argv) {
-    test_aquarius();
+    test_saturn();
 }
