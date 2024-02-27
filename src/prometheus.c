@@ -332,14 +332,50 @@ static AQDataStructure pro_get_string(DeimosFile file,
                  deimos_advance_file_position(file,offset);
                  if (deimos_peek_utf32_character(file,&offset) == ';') { 
                     deimos_advance_file_position(file,offset);
-                    return (AQDataStructure)string;
-             }   }
-         }
+                    return (AQDataStructure)string;            
+                 }           
+            }              
+        }
     }
+}
+
+static AQDataStructure pro_get_containers(DeimosFile file,
+    AQTypeFlag flag_type_for_ds, AQDataStructure sds) {
+    AQULong offset;     
+    if (deimos_peek_utf32_character(file,&offset) == ':') {
+         deimos_advance_file_position(file,offset);
+         if (deimos_peek_utf32_character(file,&offset) == '{') {    
+         get_container: 
+            prometheus_get_container(file,sds);
+             if (deimos_peek_utf32_character(file,&offset) == '}') {
+                 deimos_advance_file_position(file,offset);
+                 if (deimos_peek_utf32_character(file,&offset) == ';') { 
+                    deimos_advance_file_position(file,offset);
+                    return sds;            
+                 }           
+            } else if (deimos_peek_utf32_character(file,&offset) == '[') {
+                goto get_container;
+            }              
+        }
+    } 
+    return NULL;      
+}
+
+static AQDataStructure pro_get_mta(DeimosFile file,
+    AQTypeFlag flag_type_for_ds, AQDataStructure sds) {
+        return pro_get_containers(file,AQEmptyFlag,aqmta_new());
 }
 
 static AQDataStructure prometheus_get_container(DeimosFile file, AQDataStructure sds) {
   //init dispactch
+  static AQStore dispactch = NULL;
+  static init = 0;
+  if (!init) {
+      dispactch = aqstore_new();
+      aqstore_add_item(dispactch,pro_get_value_sbyte,"Byte");
+      aqstore_add_item(dispactch,pro_get_values_sbyte,"Bytes");
+      init++;
+  }
   //parse [name,type], use get_string, peek, and sds(super data structure)
   //parse block, via dispactch
   return NULL;
