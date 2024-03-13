@@ -22,7 +22,7 @@ void test_mta(AQAny data) {
 }
 
 void test_saturn(void) {
-    AQArray array = aqarray_new();
+    AQArray array = aq_new_array();
     int number = 1;
     aqarray_add_item(array,aq_any(number));
     number = 2;

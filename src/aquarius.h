@@ -171,6 +171,12 @@ typedef struct {
 typedef AQAllocatorStruct* AQAllocator;
 
 
+#define aq_generic_test_does_not_have_va_args(A,B,...) B()
+#define aq_generic_test_does_not_have_va_args_not(A,B,...) A(__VA_ARGS__)
+#define aq_generic_test(A,B,does_have_va_args,...) aq_generic_test_does_not_have_va_args ## does_have_va_args (A,B,__VA_ARGS__)
+#define aq_generic(A,B,...) aq_generic_test(A,B,__VA_OPT__(_not),__VA_ARGS__)
+
+
 #define aq_alloc(...) _Generic((__VA_ARGS__), \
   default: aqmem_malloc, \
   AQAllocator: aqmem_malloc_with_allocator \
@@ -205,11 +211,10 @@ AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes, AQAllocator allocator);
 
 AQDataStructureFlag aqds_get_flag(AQDataStructure ds);        
+
     
-#define aq_new_array(...) _Generic((__VA_ARGS__), \
-  default: aqarray_new, \
-  AQAllocator: aqarray_new_with_allocator \
-)(__VA_ARGS__)
+#define aq_new_array(...)\
+ aq_generic(aqarray_new_with_allocator,aqarray_new,__VA_ARGS__)
 #define aq_new_array_with_base_size(...) _Generic((__VA_ARGS__), \
   default: aqarray_new_with_base_size, \
   AQAllocator: aqarray_new_with_base_size_with_allocator \
@@ -283,10 +288,10 @@ void aqstring_iterate_bytes_with(AQIteratorFuncType iterator, AQString string);
 void aqstring_iterate_characters_with(AQIteratorFuncType iterator, AQString string);
 
 
-#define aq_new_list(...) _Generic((__VA_ARGS__), \
-  default: aqlist_new, \
-  AQAllocator: aqlist_new_with_allocator \
-)(__VA_ARGS__)
+
+#define aq_new_list(...)\
+ aq_generic(aqlist_new_with_allocator,aqlist_new,__VA_ARGS__)
+
 #define aq_new_list_from_array(...) _Generic((__VA_ARGS__), \
   default: aqlist_new_from_array, \
   AQAllocator: aqlist_new_from_array_with_allocator \
@@ -330,10 +335,8 @@ AQListNode aqlist_previous_node_after_n(AQListNode node, AQULong n);
 void aqlist_iterate_with(AQIteratorFuncType iterator, AQList list);
 
 
-#define aq_new_stack(...) _Generic((__VA_ARGS__), \
-  default: aqstack_new, \
-  AQAllocator: aqstack_new_with_allocator \
-)(__VA_ARGS__)
+#define aq_new_stack(...)\
+ aq_generic(aqstack_new_with_allocator,aqstack_new,__VA_ARGS__)
 
 AQStack aqstack_new(void);
 AQStack aqstack_new_with_allocator(AQAllocator allocator);
@@ -346,10 +349,8 @@ AQList aqstack_get_list(AQStack stack);
 AQListNode aqstack_get_list_node(AQStack stack);
 
 
-#define aq_new_stackbuffer(...) _Generic((__VA_ARGS__), \
-  default: aqstackbuffer_new, \
-  AQAllocator: aqstackbuffer_new_with_allocator \
-)(__VA_ARGS__)
+#define aq_new_stackbuffer(...)\
+ aq_generic(aqstackbuffer_new_with_allocator,aqstackbuffer_new,__VA_ARGS__)
 
 AQStackBuffer aqstackbuffer_new(void);
 AQStackBuffer aqstackbuffer_new_with_allocator(AQAllocator allocator);
@@ -362,10 +363,8 @@ AQInt aqstackbuffer_is_empty(AQStackBuffer stack);
 AQArray aqstackbuffer_get_array(AQStackBuffer stack);
 
 
-#define aq_new_mta(...) _Generic((__VA_ARGS__), \
-  default: aqmta_new, \
-  AQAllocator: aqmta_new_with_allocator \
-)(__VA_ARGS__)
+#define aq_new_mta(...)\
+ aq_generic(aqmta_new_with_allocator,aqmta_new,__VA_ARGS__)
 
 #define aq_mta_add_item(type,mta,value)\
  aqmta_add_item_##type(mta,value)
@@ -518,10 +517,8 @@ AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index);
 void aqmta_iterate_all_types_with(AQIteratorFuncType iterator, AQMultiTypeArray mta);
 
 
-#define aq_new_mtastackbuffer(...) _Generic((__VA_ARGS__), \
-  default: aqmtastackbuffer_new, \
-  AQAllocator: aqmtastackbuffer_new_with_allocator \
-)(__VA_ARGS__)
+#define aq_new_mtastackbuffer(...)\
+ aq_generic(aqmtastackbuffer_new_with_allocator,aqmtastackbuffer_new,__VA_ARGS__)
 #define aq_mtastackbuffer_push_item(type,stack,item)\
  aqmtastackbuffer_push_item##type(stack,item)
 #define aq_mtastackbuffer_pop_item_base(type,stack)\
@@ -624,10 +621,8 @@ AQInt aqmtastackbuffer_is_empty(AQMTAStackBuffer stack);
 AQMultiTypeArray aqmtastackbuffer_get_mta(AQMTAStackBuffer stack);
 
 
-#define aq_new_store(...) _Generic((__VA_ARGS__), \
-  default: aqstore_new, \
-  AQAllocator: aqstore_new_with_allocator \
-)(__VA_ARGS__)
+#define aq_new_store(...) \
+ aq_generic(aqstore_new_with_allocator,aqstore_new,__VA_ARGS__)
 #define aq_store_foreach(node,store) aq_list_foreach(node,aqstore_get_list(store))
 
 AQStore aqstore_new(void);
