@@ -313,6 +313,16 @@ void test_saturn(void) {
     aqstore_destroy(store99);
     
     deimos_close_file(file);
+    
+    file = deimos_open_file("TEST.pro",DeimosReadModeFlag);
+    AQStore test_data = prometheus_load_file(file);
+    if (test_data == NULL) puts("NO!");
+    AQArray test_array = aqstore_get_item(test_data,"TESTDATA");
+    AQMultiTypeArray test_mta_data = aqarray_get_item(test_array,0);
+    aqmta_iterate_all_types_with(test_mta,test_mta_data);
+    AQString test_string = aqarray_get_item(test_array,2);
+    printf("test_string is %s\n",aqstring_get_c_string(test_string));
+    deimos_close_file(file);
 }
 
 int main(int argc, const char **argv) {

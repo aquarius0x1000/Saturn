@@ -21,6 +21,7 @@ FILE* deimos_get_file_struct(DeimosFile file);
 AQULong deimos_get_file_position(DeimosFile file);
 AQInt deimos_set_file_position(DeimosFile file, AQULong position);
 AQInt deimos_advance_file_position(DeimosFile file, AQULong offset);
+AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset);
 AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end);
 AQByte deimos_get_byte(DeimosFile file);
 AQSByte deimos_get_sbyte(DeimosFile file);

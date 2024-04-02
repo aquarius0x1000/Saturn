@@ -1,6 +1,6 @@
 #include "deimos.h"
 
-#if  !_WIN32
+#if !_WIN32
  #include <dlfcn.h>
 #endif
 
@@ -76,16 +76,31 @@ AQInt deimos_advance_file_position(DeimosFile file, AQULong offset) {
         deimos_get_file_position(file)+offset);
 }
 
+AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset) {
+    return deimos_set_file_position(file,
+        deimos_get_file_position(file)-offset);
+}
+
 AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end) {
+    AQInt mode = 0;
     AQInt character = 0;
     AQInt has_started = 0;
     AQInt* string = NULL;
     AQULong num_of_characters = 0;
+    if (start == end) mode++;
     while ((character = deimos_get_utf32_character(file)) != EOF) {
+        if (mode) goto validate;
         if (character == start) has_started++;
         if (character == start) continue;
         if (!has_started) continue;
         if (character == end) break;
+        goto add_character;
+    validate:
+        if (character == start) has_started++;
+        if (character == start && has_started == 1) continue;
+        if (!has_started) continue;
+        if (has_started > 1) break;
+    add_character:    
         num_of_characters++;
         if (string == NULL) string = aq_make_c_array(num_of_characters, AQInt);
         if (string != NULL) string = aq_realloc(string, num_of_characters,
@@ -105,7 +120,7 @@ static AQString deimos_get_number(DeimosFile file) {
     while ((character = deimos_get_utf32_character(file)) != EOF) {
         if (isdigit(character)) found_numbers++;
         if (!found_numbers) continue;
-        if (!isdigit(character)) break;
+        if (!isdigit(character) && character != '.') break;
         num_of_characters++;
         if (string == NULL) string = aq_make_c_array(num_of_characters, AQInt);
         if (string != NULL) string = aq_realloc(string, num_of_characters,
@@ -402,7 +417,9 @@ loop:
 
 AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset) {
    AQULong file_position = deimos_get_file_position(file);
+skip: 
    AQInt character = deimos_get_utf32_character(file);
+   if (isspace(character)) goto skip;
    *offset = deimos_get_file_position(file) - file_position;
    deimos_set_file_position(file,file_position);
    return character;
@@ -410,9 +427,11 @@ AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset) {
 
 AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset) {
    AQULong file_position = deimos_get_file_position(file);
+skip: 
    AQULong last = file_position - (1+offset);
    deimos_set_file_position(file,last);
    AQInt character = deimos_get_utf32_character(file);
+   if (isspace(character)) goto skip;
    deimos_set_file_position(file,file_position);
    return character;
 }
