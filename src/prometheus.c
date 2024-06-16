@@ -236,7 +236,7 @@ AQInt prometheus_output_file(DeimosFile file, AQDataStructure data) {
 
 static AQInt pro_validate_label(AQString label) {
   aq_string_for_each_character(index,label) {
-    AQULong offset = 0;
+    AQSByte offset = 0;
     AQInt character;
     if (aqstring_get_size(label) > 100) return 0;
     character = aqstring_get_character(label,index,&offset);
@@ -439,6 +439,7 @@ static AQDataStructure pro_get_container(DeimosFile file, AQDataStructure sds) {
         type = deimos_get_string(file,'@',']');
         if (aqstring_get_size(type) > 7) return NULL;
         block = aqstore_get_item(dispactch,aqstring_get_c_string(type));
+        if (block == NULL) return NULL;
         ds = block(file,sds);
         aqstring_destroy(type);
         type = NULL;

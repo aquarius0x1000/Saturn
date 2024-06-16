@@ -1,7 +1,7 @@
 #include "src/aquarius.h"
 #include "src/deimos.h"
 #include "src/prometheus.h"
-
+  
 AQAny test_malloc(AQAny allocation_data, AQULong size_in_bytes) {
     puts("Hello from the world!!!!!!!!!");
     return malloc(size_in_bytes);
@@ -202,9 +202,18 @@ void test_saturn(void) {
     
     aqmta_iterate_all_types_with(test_mta,mta);
     
-    printf("MTA size for AQInt: %d\n",aq_mta_get_num_of_items(AQInt,mta));
-    printf("MTA size for AQByte: %d\n",aq_mta_get_num_of_items(AQByte,mta));
-    printf("MTA size for All: %d\n",aqmta_get_num_of_items_all_types(mta));
+    aq_print(c_string,"MTA size for AQInt: ");
+    aq_print(ulong,aq_mta_get_num_of_items(AQInt,mta));
+    aq_print(c_string,".\n");
+    
+    aq_print(c_string,"MTA size for AQByte: ");
+    aq_print(ulong,aq_mta_get_num_of_items(AQByte,mta));
+    aq_print(c_string,".\n");
+    
+    aq_print(c_string,"MTA size for All: ");
+    aq_print(ulong,aqmta_get_num_of_items_all_types(mta)); 
+    aq_print(c_string,".\n");
+    
     
     aq_mta_foreach(AQInt,i,mta) {
         printf("MTA foreach int: %d\n",aq_mta_get_item(AQInt,mta,i));
@@ -304,7 +313,7 @@ void test_saturn(void) {
     
     aqstore_add_item(store99,array99,"TESTDATA");
     
-    prometheus_output_file(file,store99);
+    prometheus_output_file(file,(AQDataStructure)store99);
     
     aqstring_destroy(string99);
     aqmta_destroy(mta99);
@@ -315,14 +324,23 @@ void test_saturn(void) {
     deimos_close_file(file);
     
     file = deimos_open_file("TEST.pro",DeimosReadModeFlag);
-    AQStore test_data = prometheus_load_file(file);
+    AQStore test_data = (AQStore)prometheus_load_file(file);
     if (test_data == NULL) puts("NO!");
     AQArray test_array = aqstore_get_item(test_data,"TESTDATA");
     AQMultiTypeArray test_mta_data = aqarray_get_item(test_array,0);
     aqmta_iterate_all_types_with(test_mta,test_mta_data);
     AQString test_string = aqarray_get_item(test_array,2);
     printf("test_string is %s\n",aqstring_get_c_string(test_string));
+    aq_destroy(test_array);
+    aq_destroy(test_data);
+    aq_destroy(test_string);
+    aq_destroy(test_mta_data);
     deimos_close_file(file);
+    
+    aq_print(c_string,"Hello Wordl!\n");
+    aq_print(c_string,"And the number is: ");
+    aq_print(ulong,38475893L);
+    aq_print(c_string,".\n");
 }
 
 int main(int argc, const char **argv) {

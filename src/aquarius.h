@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <time.h>
+#include <float.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,6 +116,7 @@ typedef AQRandStateStruct* AQRandState;
 
 typedef enum {
   AQNoDataStructureFlag,
+  AQDestroyableFlag,
   AQArrayFlag,
   AQStringFlag,
   AQListFlag,
@@ -126,7 +128,7 @@ typedef enum {
   AQMTAContainerFlag,
   AQStoreFlag,
 } AQDataStructureFlag;
-
+ 
 typedef struct AQDataStructure_s* AQDataStructure;
 typedef struct AQArray_s* AQArray;
 typedef struct AQString_s* AQString;
@@ -158,6 +160,9 @@ typedef struct {
 } AQMTAContainer;
 
 typedef void (*AQIteratorFuncType)(AQAny data);
+typedef void (*AQDestroyerFuncType)(AQDataStructure data);
+typedef void (*AQByteIteratorFuncType)(AQByte character);
+typedef void (*AQCharacterIteratorFuncType)(AQUInt character);
 typedef AQAny (*AQGetDataFromArrayFuncType)(AQAny array, AQULong index);
 typedef AQAny (*AQAllocatorFuncType)(AQAny allocation_data, AQULong size_in_bytes);
 typedef void (*AQAllocatorFreeFuncType)(AQAny allocation_data, AQAny data_to_be_freed);
@@ -173,8 +178,25 @@ typedef AQAllocatorStruct* AQAllocator;
 
 #define aq_generic_test_does_not_have_va_args(A,B,...) B()
 #define aq_generic_test_does_not_have_va_args_not(A,B,...) A(__VA_ARGS__)
-#define aq_generic_test(A,B,does_have_va_args,...) aq_generic_test_does_not_have_va_args ## does_have_va_args (A,B,__VA_ARGS__)
+#define aq_generic_test(A,B,does_have_va_args,...)\
+ aq_generic_test_does_not_have_va_args ## does_have_va_args (A,B,__VA_ARGS__)
 #define aq_generic(A,B,...) aq_generic_test(A,B,__VA_OPT__(_not),__VA_ARGS__)
+
+
+#define aq_print(type, value) aqprint_##type(value)
+
+AQInt aqprint_string(AQString value);
+AQInt aqprint_c_string(AQChar* value);
+AQInt aqprint_byte(AQByte value);
+AQInt aqprint_sbyte(AQSByte value);
+AQInt aqprint_short(AQShort value);
+AQInt aqprint_ushort(AQUShort value);
+AQInt aqprint_int(AQInt value);
+AQInt aqprint_uint(AQUInt value);
+AQInt aqprint_long(AQLong value);
+AQInt aqprint_ulong(AQULong value);
+AQInt aqprint_float(AQFloat value);
+AQInt aqprint_double(AQDouble value);
 
 
 #define aq_alloc(...) _Generic((__VA_ARGS__), \
@@ -191,6 +213,8 @@ typedef AQAllocatorStruct* AQAllocator;
   default: aqmem_free, \
   AQAllocator: aqmem_free_with_allocator \
 )(__VA_ARGS__)
+
+#define aq_destroy(data) aqds_destroy(data)
 
 #define aq_make_c_array(size, type,...)\
  (type*) aq_alloc(sizeof(type) * (size) __VA_OPT__(,) __VA_ARGS__)
@@ -210,6 +234,8 @@ AQAny aqmem_realloc(AQAny data, AQULong newsize,
 AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes, AQAllocator allocator);
 
+
+void aqds_destroy(AQDataStructure ds);
 AQDataStructureFlag aqds_get_flag(AQDataStructure ds);        
 
     
@@ -280,12 +306,12 @@ AQString aqstring_append(AQString base_string, AQString appending_string);
 AQString aqstring_copy(AQString string);
 AQInt aqstring_are_equal(AQString a, AQString b);
 AQChar* aqstring_convert_to_c_string(AQString string);
-void aqstring_print(AQString string);
+AQInt aqstring_print(AQString string);
 AQUInt* aqstring_get_utf32_string(AQString string, AQULong* length);
 AQString aqstring_get_string_for_ascii(AQString string);
 AQString aqstring_swap_escape_sequences_with_characters(AQString string);
-void aqstring_iterate_bytes_with(AQIteratorFuncType iterator, AQString string);
-void aqstring_iterate_characters_with(AQIteratorFuncType iterator, AQString string);
+void aqstring_iterate_bytes_with(AQByteIteratorFuncType iterator, AQString string);
+void aqstring_iterate_characters_with(AQCharacterIteratorFuncType iterator, AQString string);
 
 
 
