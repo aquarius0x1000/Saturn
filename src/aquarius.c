@@ -217,9 +217,9 @@ AQArray aqarray_new_with_allocator(AQAllocator allocator) {
     AQArray array = aq_new(struct AQArray_s,allocator);
     array->flag = AQArrayFlag;
     array->destroyer = (AQDestroyerFuncType)aqarray_destroy;
+    array->allocator = allocator;
     array->num_of_items = 0;
     array->items = NULL;
-    array->allocator = allocator;
     return array;
 }
 
@@ -229,9 +229,11 @@ AQArray aqarray_new_with_base_size(AQULong base_size) {
 
 AQArray aqarray_new_with_base_size_with_allocator(AQULong base_size, AQAllocator allocator) {
     AQArray array = aq_new(struct AQArray_s, allocator);
+    array->flag = AQArrayFlag;
+    array->destroyer = (AQDestroyerFuncType)aqarray_destroy;
+    array->allocator = allocator;
     array->items = aq_make_c_array(base_size, AQAny, allocator);
     array->num_of_items = base_size;
-    array->allocator = allocator;
     return array;
 }
 

@@ -323,7 +323,7 @@ void test_saturn(void) {
     
     deimos_close_file(file);
     
-    file = deimos_open_file("TEST.pro",DeimosReadModeFlag);
+    file = deimos_open_file("TEST.pro",DeimosReadModeFlag,&allocator);
     AQStore test_data = (AQStore)prometheus_load_file(file);
     if (test_data == NULL) puts("NO!");
     AQArray test_array = aqstore_get_item(test_data,"TESTDATA");
@@ -335,7 +335,7 @@ void test_saturn(void) {
     aq_destroy(test_data);
     aq_destroy(test_string);
     aq_destroy(test_mta_data);
-    deimos_close_file(file);
+    aq_destroy(file);
     
     aq_print(c_string,"Hello Wordl!\n");
     aq_print(c_string,"And the number is: ");

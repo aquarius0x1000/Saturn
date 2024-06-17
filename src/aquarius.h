@@ -160,7 +160,7 @@ typedef struct {
 } AQMTAContainer;
 
 typedef void (*AQIteratorFuncType)(AQAny data);
-typedef void (*AQDestroyerFuncType)(AQDataStructure data);
+typedef void (*AQDestroyerFuncType)(AQDataStructure ds);
 typedef void (*AQByteIteratorFuncType)(AQByte character);
 typedef void (*AQCharacterIteratorFuncType)(AQUInt character);
 typedef AQAny (*AQGetDataFromArrayFuncType)(AQAny array, AQULong index);
@@ -214,7 +214,7 @@ AQInt aqprint_double(AQDouble value);
   AQAllocator: aqmem_free_with_allocator \
 )(__VA_ARGS__)
 
-#define aq_destroy(data) aqds_destroy(data)
+#define aq_destroy(data) aqds_destroy((AQDataStructure)data)
 
 #define aq_make_c_array(size, type,...)\
  (type*) aq_alloc(sizeof(type) * (size) __VA_OPT__(,) __VA_ARGS__)

@@ -320,7 +320,7 @@ pro_define_get_value(double,AQDouble);
              aq_type value = deimos_get_##main_type(file);\
              character = deimos_peek_last_utf32_character(file,0);\   
              if (character == ',' || character == ')') {\
-                 aq_mta_add_item(aq_type,sds,value);\
+                 aq_mta_add_item(aq_type,(AQMultiTypeArray)sds,value);\
                  if (character == ',') goto loop;\
                  if (deimos_peek_utf32_character(file,&offset) == ';') {\
                     deimos_advance_file_position(file,offset);\ 
@@ -355,10 +355,14 @@ static AQDataStructure pro_get_string(DeimosFile file, AQDataStructure sds) {
                  if (deimos_peek_utf32_character(file,&offset) == ';') { 
                     deimos_advance_file_position(file,offset);
                     return (AQDataStructure)string;            
-                 }           
-            }              
+                 }
+                 return NULL;           
+            }
+            return NULL;              
         }
+        return NULL;
     }
+    return NULL;
 }
 
 static AQDataStructure pro_get_containers(DeimosFile file, AQDataStructure sds) {
@@ -384,15 +388,15 @@ static AQDataStructure pro_get_containers(DeimosFile file, AQDataStructure sds) 
 }
 
 static AQDataStructure pro_get_mta(DeimosFile file, AQDataStructure sds) {
-        return pro_get_containers(file,aqmta_new());
+        return pro_get_containers(file,(AQDataStructure)aqmta_new());
 }
 
 static AQDataStructure pro_get_array(DeimosFile file, AQDataStructure sds) {
-        return pro_get_containers(file,aqarray_new());
+        return pro_get_containers(file,(AQDataStructure)aqarray_new());
 }
 
 static AQDataStructure pro_get_store(DeimosFile file, AQDataStructure sds) {
-        return pro_get_containers(file,aqstore_new());
+        return pro_get_containers(file,(AQDataStructure)aqstore_new());
 }
 
 static AQDataStructure pro_get_container(DeimosFile file, AQDataStructure sds) {  
@@ -446,12 +450,12 @@ static AQDataStructure pro_get_container(DeimosFile file, AQDataStructure sds) {
         if (sds == NULL) return ds;
         if (aqds_get_flag(sds) == AQStoreFlag) {
             if (label == NULL) return NULL;
-            aqstore_add_item(sds,ds,aqstring_get_c_string(label));
+            aqstore_add_item((AQStore)sds,ds,aqstring_get_c_string(label));
             aqstring_destroy(label);
             label = NULL;
         }
         if (aqds_get_flag(sds) == AQArrayFlag) {
-            aqarray_add_item(sds,ds);
+            aqarray_add_item((AQArray)sds,ds);
         } 
         return ds;
   }
