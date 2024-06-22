@@ -525,6 +525,10 @@ void aqstring_destroy(AQString string) {
     aq_free(string, string->allocator);
 }
 
+AQAllocator aqstring_get_allocator(AQString string) {
+    return string->allocator;
+}
+
 AQULong aqstring_get_size(AQString string) {
     return string->size_in_bytes;
 }
@@ -844,6 +848,15 @@ AQString aqstring_swap_escape_sequences_with_characters(AQString string) {
     retstring = aqstring_new_from_utf32_with_allocator(str, str_size, string->allocator);
     aq_free(str,string->allocator);
     return retstring;
+}
+
+AQString aqstring_expand(AQString string, AQULong expand_amount) {
+    AQULong new_size = expand_amount + aqstring_get_size_in_bytes(string);
+    string->data = aq_realloc(string->data,new_size,
+        aqstring_get_size_in_bytes(string),AQChar,1,string->allocator);
+    string->size_in_characters = -1;
+    if (string->data == NULL) return NULL;
+    return string; 
 }
 
 void aqstring_iterate_bytes_with(AQByteIteratorFuncType iterator, AQString string) {

@@ -10,6 +10,11 @@ typedef enum {
  DeimosWriteModeFlag 
 } DeimosFileModeFlag;
 
+typedef enum { 
+ DeimosFileBackedFlag, 
+ DeimosStringBackedFlag 
+} DeimosBackingFlag;
+
 #define deimos_open_file(...) _Generic((__VA_ARGS__), \
   default: deimos_open_file_without_allocator, \
   AQAllocator: deimos_open_file_with_allocator \
@@ -53,11 +58,6 @@ AQInt deimos_output_long(DeimosFile file, AQLong value);
 AQInt deimos_output_ulong(DeimosFile file, AQULong value);
 AQInt deimos_output_float(DeimosFile file, AQFloat value);
 AQInt deimos_output_double(DeimosFile file, AQDouble value);
-
-AQUInt deimos_read_32bit_int(DeimosFile file, AQInt* error);
-AQInt deimos_write_32bit_int(DeimosFile file, AQInt num);
-AQFloat deimos_read_32bit_float(DeimosFile file, AQInt* error);
-AQInt deimos_write_32bit_float(DeimosFile file, AQFloat num);
 
 AQInt deimos_get_utf32_character(DeimosFile file);
 AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset);

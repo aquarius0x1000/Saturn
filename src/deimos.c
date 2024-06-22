@@ -13,11 +13,12 @@ struct DeimosFile_s {
   AQDestroyerFuncType destroyer;
   AQAllocator allocator;
   DeimosFileModeFlag mode; 
-  AQInt tab;  
+  AQInt tab;
+  AQULong index;
   FILE* file_struct;
+  AQString file_buffer;
+  DeimosBackingFlag backing;
 };
-
-
 
 #ifdef _WIN32
  #define deimos_ftell(file) _ftelli64(file)
@@ -30,6 +31,46 @@ struct DeimosFile_s {
 #else
  #define deimos_fseek(file,pos,origin) fseek(file,pos,origin)
 #endif 
+
+//fprintf
+
+static AQULong deimos_internal_ftell(DeimosFile file) {
+    if (file->backing == DeimosFileBackedFlag)
+     return deimos_ftell(file->file_struct);
+    if (file->backing == DeimosStringBackedFlag)
+     return file->index;
+    return EOF; 
+}
+
+static void deimos_internal_fseek(DeimosFile file, AQULong index, AQInt flag) {
+    if (file->backing == DeimosFileBackedFlag)
+     deimos_fseek(file->file_struct,index,flag);
+    if (file->backing == DeimosStringBackedFlag)
+     file->index = index;
+}
+
+static AQInt deimos_internal_fgetc(DeimosFile file) {
+    if (file->backing == DeimosFileBackedFlag)
+     return fgetc(file->file_struct);
+    if (file->backing == DeimosStringBackedFlag)  {
+        if ( file->index > aqstring_get_size(file->file_buffer) ) return EOF;
+        if ( file->index < 0 ) return EOF;
+        return aqstring_get_byte(file->file_buffer,file->index);
+    }
+    return EOF;
+}
+
+static AQInt deimos_internal_fputc(DeimosFile file, AQInt byte) {
+    if (file->backing == DeimosFileBackedFlag)
+     return fputc(byte,file->file_struct);
+    if (file->backing == DeimosStringBackedFlag)  {
+        if ( file->index > aqstring_get_size(file->file_buffer) ) return EOF;
+        if ( file->index < 0 ) return EOF;
+        aqstring_set_byte(file->file_buffer,file->index,(AQByte)byte);
+        return 0;
+    }
+    return EOF;
+}
 
 DeimosFile deimos_open_file_without_allocator(const AQChar* filepath, DeimosFileModeFlag mode) {
     return deimos_open_file_with_allocator(filepath,mode,aqmem_default_allocator());
@@ -44,12 +85,29 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
     if ( mode == DeimosReadModeFlag ) file->file_struct = fopen(filepath, "r");
     if ( mode == DeimosWriteModeFlag ) file->file_struct = fopen(filepath, "w");
     file->mode = mode;
+    file->backing = DeimosFileBackedFlag;
     file->tab = 0;
+    file->index = 0;
+    return file;
+}
+
+DeimosFile deimos_get_file_from_string(AQString string, DeimosFileModeFlag mode) {
+     DeimosFile file = aq_new(struct DeimosFile_s,aqstring_get_allocator(string));
+    file->flag = AQDestroyableFlag;
+    file->destroyer = (AQDestroyerFuncType)deimos_close_file;
+    file->allocator = aqstring_get_allocator(string);
+    file->mode = mode;
+    file->backing = DeimosStringBackedFlag;
+    file->tab = 0;
+    file->index = 0;
     return file;
 }
 
 void deimos_close_file(DeimosFile file) {
-    fclose(file->file_struct);
+    if (file->backing == DeimosFileBackedFlag) 
+     fclose(file->file_struct);
+    if (file->backing == DeimosStringBackedFlag) 
+     aqstring_destroy(file->file_buffer); 
     aq_free(file,file->allocator);
 }
 
@@ -262,91 +320,6 @@ AQInt deimos_output_double(DeimosFile file, AQDouble value) {
 
 AQInt deimos_get_character(DeimosFile file) {
     return deimos_get_utf32_character(file);
-}
-
-static AQUInt deimos_internal_get_32bit_int(FILE* file, AQInt* error) {
-    static AQUInt table[] = {1,256,65536,16777216};
-    AQInt i = 0;
-    AQInt input = 0;
-    AQInt errorval = 0;
-    AQUInt numsum = 0;
-    while (i < 4) {
-        input = getc(file);
-        if (input == EOF){
-            errorval++;
-            break;
-        }
-        numsum += (input * table[i]);
-        i++;
-    }
-    *error = errorval;
-    return numsum;
-}
-
-static AQInt deimos_internal_set_32bit_int(FILE* file, AQUInt num) {
-    static AQUInt table[] = {1,256,65536,16777216};
-    AQByte array[4];
-    AQInt i = 0;
-    AQInt j = 3;
-    AQInt error = 0;
-    AQUInt output = 0;
-    while (j >= 0) {
-        if ( num < table[j] ) {
-         array[j] = 0;
-        } else {
-         output = num / table[j];
-         array[j] = output;
-         num -= (output * table[j]);
-        }
-        j-- ;
-    }
-    while ( i < 4 ) {
-        error = putc(array[i],file);
-        if (error == EOF) break;
-        i++;
-    }
-    return (error < 0) ? 1 : 0;
-}
-
-static AQFloat deimos_internal_get_32bit_float(FILE* file, AQInt* error) {
-    AQUInt i = deimos_internal_get_32bit_int(file, error);
-    return *((AQFloat*)&i);
-}
-
-static AQInt deimos_internal_set_32bit_float(FILE* file, AQFloat num) {
-    AQUInt i = *((AQUInt*)&num);
-    return deimos_internal_set_32bit_int(file, i);
-}
-
-
-AQUInt deimos_read_32bit_int(DeimosFile file, AQInt* error) {
-    if ( file->mode != DeimosReadModeFlag ) {
-        *error = -1;
-        return 0;
-    }
-    return deimos_internal_get_32bit_int(file->file_struct, error);
-}
-
-AQInt deimos_write_32bit_int(DeimosFile file, AQInt num) {
-    if ( file->mode != DeimosWriteModeFlag ) {
-        return -1;
-    }
-   return deimos_internal_set_32bit_int(file->file_struct, num);
-}
-
-AQFloat deimos_read_32bit_float(DeimosFile file, AQInt* error) {
-    if ( file->mode != DeimosReadModeFlag ) {
-        *error = -1;
-        return 0;
-    }
-    return deimos_internal_get_32bit_float(file->file_struct, error);
-}
-
-AQInt deimos_write_32bit_float(DeimosFile file, AQFloat num) {
-    if ( file->mode != DeimosWriteModeFlag ) {
-        return -1;
-    }
-    return deimos_internal_set_32bit_float(file->file_struct, num) ;
 }
 
 AQInt deimos_get_utf32_character(DeimosFile file) {

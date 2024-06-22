@@ -295,6 +295,7 @@ AQString aqstring_new_from_two_strings(AQString a, AQString b);
 AQString aqstring_new_from_two_strings_with_allocator(AQString a,
    AQString b, AQAllocator allocator);
 void aqstring_destroy(AQString string);
+AQAllocator aqstring_get_allocator(AQString string);
 AQULong aqstring_get_size(AQString string);
 AQULong aqstring_get_size_in_bytes(AQString string);
 AQULong aqstring_get_length(AQString string);
@@ -310,9 +311,9 @@ AQInt aqstring_print(AQString string);
 AQUInt* aqstring_get_utf32_string(AQString string, AQULong* length);
 AQString aqstring_get_string_for_ascii(AQString string);
 AQString aqstring_swap_escape_sequences_with_characters(AQString string);
+AQString aqstring_expand(AQString string, AQULong expand_amount);
 void aqstring_iterate_bytes_with(AQByteIteratorFuncType iterator, AQString string);
 void aqstring_iterate_characters_with(AQCharacterIteratorFuncType iterator, AQString string);
-
 
 
 #define aq_new_list(...)\
