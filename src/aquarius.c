@@ -664,7 +664,7 @@ AQString aqstring_copy(AQString string) {
 }
 
 AQInt aqstring_are_equal(AQString a, AQString b) {
-    return (strcmp(aqstring_get_c_string(a), aqstring_get_c_string(b)) == 0 );
+    return (strcmp(aqstring_get_c_string(a), aqstring_get_c_string(b)) == 0);
 }
 
 AQChar* aqstring_convert_to_c_string(AQString string) {
@@ -855,6 +855,7 @@ AQString aqstring_expand(AQString string, AQULong expand_amount) {
     string->data = aq_realloc(string->data,new_size,
         aqstring_get_size_in_bytes(string),AQChar,1,string->allocator);
     string->size_in_characters = -1;
+    string->size_in_bytes = new_size-1;
     if (string->data == NULL) return NULL;
     return string; 
 }

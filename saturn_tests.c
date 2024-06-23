@@ -277,6 +277,7 @@ void test_saturn(void) {
     printf("%s\n", "Hello World!!!");
     
     DeimosFile file = deimos_open_file("TEST.pro",DeimosWriteModeFlag);
+    DeimosFile file2 = deimos_get_file_from_string(aqstr(""),DeimosWriteModeFlag);
     
     AQStore store99 = aqstore_new();
     AQArray array99 = aqarray_new();
@@ -314,6 +315,7 @@ void test_saturn(void) {
     aqstore_add_item(store99,array99,"TESTDATA");
     
     prometheus_output_file(file,(AQDataStructure)store99);
+    prometheus_output_file(file2,(AQDataStructure)store99);
     
     aqstring_destroy(string99);
     aqmta_destroy(mta99);
@@ -322,6 +324,13 @@ void test_saturn(void) {
     aqstore_destroy(store99);
     
     deimos_close_file(file);
+    
+    AQString file_string = 
+     aqstring_copy(deimos_get_file_string(file2));
+    
+    deimos_close_file(file2);
+    
+    printf("PRINT: %s\n",aqstring_get_c_string(file_string));
     
     file = deimos_open_file("TEST.pro",DeimosReadModeFlag,&allocator);
     AQStore test_data = (AQStore)prometheus_load_file(file);

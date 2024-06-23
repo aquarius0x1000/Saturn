@@ -33,12 +33,15 @@ struct DeimosFile_s {
 #endif 
 
 static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
+    if ( file->mode != DeimosWriteModeFlag ) return EOF;
     AQInt result;
     va_list args;
     va_start(args, format);
     if (file->backing == DeimosFileBackedFlag)
      result = vfprintf(file->file_struct,format,args);
     if (file->backing == DeimosStringBackedFlag) {
+     if ( file->index+100 >= aqstring_get_size(file->file_buffer) )   
+      aqstring_expand(file->file_buffer,100);       
      if ( file->index > aqstring_get_size(file->file_buffer) ) result = EOF;
      if ( file->index < 0 ) result = EOF;
      if (result == EOF) goto end;
@@ -46,7 +49,9 @@ static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
       vsnprintf(&(aqstring_get_c_string(file->file_buffer)[file->index]),
           aqstring_get_size_in_bytes(file->file_buffer)-file->index,
            format,
-            args); 
+            args);
+            
+    if (result > 0) file->index += result;     
     }
 end:        
     va_end(args);
@@ -72,6 +77,7 @@ static AQInt deimos_internal_fseek(DeimosFile file, AQULong index, AQInt flag) {
 }
 
 static AQInt deimos_internal_fgetc(DeimosFile file) {
+    if ( file->mode != DeimosReadModeFlag ) return EOF;
     AQInt result;
     if (file->backing == DeimosFileBackedFlag)
      return fgetc(file->file_struct);
@@ -86,9 +92,12 @@ static AQInt deimos_internal_fgetc(DeimosFile file) {
 }
 
 static AQInt deimos_internal_fputc(AQInt byte, DeimosFile file) {
+    if ( file->mode != DeimosWriteModeFlag ) return EOF;
     if (file->backing == DeimosFileBackedFlag)
      return fputc(byte,file->file_struct);
     if (file->backing == DeimosStringBackedFlag)  {
+        if ( file->index >= aqstring_get_size(file->file_buffer) ) 
+         aqstring_expand(file->file_buffer,1);
         if ( file->index > aqstring_get_size(file->file_buffer) ) return EOF;
         if ( file->index < 0 ) return EOF;
         aqstring_set_byte(file->file_buffer,file->index,(AQByte)byte);
@@ -122,6 +131,7 @@ DeimosFile deimos_get_file_from_string(AQString string, DeimosFileModeFlag mode)
     file->flag = AQDestroyableFlag;
     file->destroyer = (AQDestroyerFuncType)deimos_close_file;
     file->allocator = aqstring_get_allocator(string);
+    file->file_buffer = string;
     file->mode = mode;
     file->backing = DeimosStringBackedFlag;
     file->tab = 0;
@@ -133,12 +143,16 @@ void deimos_close_file(DeimosFile file) {
     if (file->backing == DeimosFileBackedFlag) 
      fclose(file->file_struct);
     if (file->backing == DeimosStringBackedFlag) 
-     aqstring_destroy(file->file_buffer); 
+     aqstring_destroy(file->file_buffer);
     aq_free(file,file->allocator);
 }
 
 FILE* deimos_get_file_struct(DeimosFile file) {
     return file->file_struct;
+}
+
+AQString deimos_get_file_string(DeimosFile file) {
+    return file->file_buffer;
 }
 
 AQULong deimos_get_file_position(DeimosFile file) {
@@ -157,6 +171,10 @@ AQInt deimos_advance_file_position(DeimosFile file, AQULong offset) {
 AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset) {
     return deimos_set_file_position(file,
         deimos_get_file_position(file)-offset);
+}
+
+AQInt deimos_get_character(DeimosFile file) {
+    return deimos_get_utf32_character(file);
 }
 
 AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end) {
@@ -211,6 +229,7 @@ static AQString deimos_internal_get_number(DeimosFile file) {
 }
 
 static AQLong deimos_internal_get_signed(DeimosFile file) {
+    if ( file->mode != DeimosReadModeFlag ) return EOF;
     AQString string = deimos_internal_get_number(file);
     AQLong value = strtoimax(aqstring_get_c_string(string),NULL,10);
     aqstring_destroy(string);
@@ -218,6 +237,7 @@ static AQLong deimos_internal_get_signed(DeimosFile file) {
 }
 
 static AQULong deimos_internal_get_unsigned(DeimosFile file) {
+    if ( file->mode != DeimosReadModeFlag ) return EOF;
     AQString string = deimos_internal_get_number(file);
     AQULong value = strtoumax(aqstring_get_c_string(string),NULL,10);
     aqstring_destroy(string);
@@ -225,6 +245,7 @@ static AQULong deimos_internal_get_unsigned(DeimosFile file) {
 }
 
 static AQDouble deimos_internal_get_floating_point(DeimosFile file) {
+    if ( file->mode != DeimosReadModeFlag ) return EOF;
     AQString string = deimos_internal_get_number(file);
     AQDouble value = strtod(aqstring_get_c_string(string),NULL);
     aqstring_destroy(string);
@@ -281,11 +302,13 @@ AQInt deimos_output_sub_from_tab(DeimosFile file, AQInt value) {
 
 AQInt deimos_output_tab(DeimosFile file) {
     AQInt i = file->tab;
+    AQInt result;
     while (i > 0) {
-        deimos_internal_fputc('\t',file);
+        result = deimos_internal_fputc('\t',file);
+        if (result == EOF) return EOF;
         i--;
     } 
-  return 1;
+  return 0;
 }
 
 AQInt deimos_output_character(DeimosFile file, AQInt value) {
@@ -344,14 +367,8 @@ AQInt deimos_output_double(DeimosFile file, AQDouble value) {
     return deimos_internal_fprintf(file,"%.*lf",DECIMAL_DIG + 6,value);
 }
 
-AQInt deimos_get_character(DeimosFile file) {
-    return deimos_get_utf32_character(file);
-}
-
 AQInt deimos_get_utf32_character(DeimosFile file) {
-    if ( file->mode != DeimosReadModeFlag ) {
-        return -1;
-    }
+    if ( file->mode != DeimosReadModeFlag ) return EOF;
     AQInt n = 0;
     AQSByte byte = 0;
     AQUInt byte0 = 0;
@@ -362,7 +379,7 @@ AQInt deimos_get_utf32_character(DeimosFile file) {
     AQSByte basebyte = 0;
 loop:
     byte = deimos_internal_fgetc(file);
-    if ( byte == EOF ) return byte;
+    if ( byte == EOF ) return EOF;
     basebyte = byte;
     if ( byte > 0 ) {
         n = 1;
