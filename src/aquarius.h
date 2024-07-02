@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <string.h>
+#include <stdarg.h>
 #include <inttypes.h>
 
 #ifdef __GNUC__
@@ -214,8 +215,6 @@ AQInt aqprint_double(AQDouble value);
   AQAllocator: aqmem_free_with_allocator \
 )(__VA_ARGS__)
 
-#define aq_destroy(data) aqds_destroy((AQDataStructure)data)
-
 #define aq_make_c_array(size, type,...)\
  (type*) aq_alloc(sizeof(type) * (size) __VA_OPT__(,) __VA_ARGS__)
 #define aq_new(type, ...)\
@@ -234,6 +233,8 @@ AQAny aqmem_realloc(AQAny data, AQULong newsize,
 AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes, AQAllocator allocator);
 
+
+#define aq_destroy(data) aqds_destroy((AQDataStructure)data)
 
 void aqds_destroy(AQDataStructure ds);
 AQDataStructureFlag aqds_get_flag(AQDataStructure ds);        
@@ -659,6 +660,7 @@ void aqstore_destroy(AQStore store);
 AQInt aqstore_add_item(AQStore store, AQAny item, const AQChar* label);
 AQInt aqstore_remove_item(AQStore store, const AQChar* label);
 AQAny aqstore_get_item(AQStore store, const AQChar* label);
+AQAny aqstore_get_item_with_character(AQStore store, AQInt character);
 AQInt aqstore_item_exists(AQStore store, const AQChar* label);
 AQInt aqstore_num_of_items(AQStore store);
 AQInt aqstore_is_store_empty(AQStore store);

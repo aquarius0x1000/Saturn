@@ -30,6 +30,8 @@ void deimos_close_file(DeimosFile file);
 
 FILE* deimos_get_file_struct(DeimosFile file);
 AQString deimos_get_file_string(DeimosFile file);
+DeimosFileModeFlag deimos_get_file_mode(DeimosFile file);
+DeimosBackingFlag deimos_get_file_backing(DeimosFile file);
 AQULong deimos_get_file_position(DeimosFile file);
 AQInt deimos_set_file_position(DeimosFile file, AQULong position);
 AQInt deimos_advance_file_position(DeimosFile file, AQULong offset);
@@ -64,9 +66,16 @@ AQInt deimos_output_ulong(DeimosFile file, AQULong value);
 AQInt deimos_output_float(DeimosFile file, AQFloat value);
 AQInt deimos_output_double(DeimosFile file, AQDouble value);
 
+AQByte deimos_get_binary_byte(DeimosFile file);
+AQInt deimos_output_binary_byte(DeimosFile file, AQByte byte);
+
+AQInt deimos_get_base_32_star_encode(DeimosFile file_to_encode, DeimosFile encoded_file);
+AQInt deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decoded_file);
+
 AQInt deimos_get_utf32_character(DeimosFile file);
 AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset);
 AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset);
+void deimos_output_utf32_character(DeimosFile file, AQInt character);
 
 AQAny deimos_load_library_file(const AQChar* filepath);
 AQInt deimos_free_library(AQAny library);

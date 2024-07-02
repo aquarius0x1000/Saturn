@@ -856,6 +856,7 @@ AQString aqstring_expand(AQString string, AQULong expand_amount) {
         aqstring_get_size_in_bytes(string),AQChar,1,string->allocator);
     string->size_in_characters = -1;
     string->size_in_bytes = new_size-1;
+    string->data[new_size-1] = '\0';
     if (string->data == NULL) return NULL;
     return string; 
 }
@@ -1812,6 +1813,15 @@ AQAny aqstore_get_item(AQStore store, const AQChar* label) {
     AQListNode node = aqinternal_store_retrieve_node(store,label);
     if ( node == NULL ) return NULL;
     return aqlist_get_item(node);
+}
+
+AQAny aqstore_get_item_with_character(AQStore store, AQInt character) {
+    const AQInt* text = &character;
+    AQString string = aqstring_new_from_utf32(text,1);
+    AQChar* c_string = aqstring_get_c_string(string);
+    AQAny item = aqstore_get_item(store,c_string);
+    free(c_string);
+    return item;
 }
 
 AQInt aqstore_item_exists(AQStore store, const AQChar* label) {

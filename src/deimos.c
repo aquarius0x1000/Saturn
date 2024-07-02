@@ -50,7 +50,6 @@ static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
           aqstring_get_size_in_bytes(file->file_buffer)-file->index,
            format,
             args);
-            
     if (result > 0) file->index += result;     
     }
 end:        
@@ -85,6 +84,7 @@ static AQInt deimos_internal_fgetc(DeimosFile file) {
         if ( file->index > aqstring_get_size(file->file_buffer) ) return EOF;
         if ( file->index < 0 ) return EOF;
         result = aqstring_get_byte(file->file_buffer,file->index);
+        if (result == '\0') return EOF;
         file->index++;
         return result;
     }
@@ -119,6 +119,7 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
     file->allocator = allocator;
     if ( mode == DeimosReadModeFlag ) file->file_struct = fopen(filepath, "r");
     if ( mode == DeimosWriteModeFlag ) file->file_struct = fopen(filepath, "w");
+    file->file_buffer = NULL;
     file->mode = mode;
     file->backing = DeimosFileBackedFlag;
     file->tab = 0;
@@ -132,6 +133,7 @@ DeimosFile deimos_get_file_from_string(AQString string, DeimosFileModeFlag mode)
     file->destroyer = (AQDestroyerFuncType)deimos_close_file;
     file->allocator = aqstring_get_allocator(string);
     file->file_buffer = string;
+    file->file_struct = NULL;
     file->mode = mode;
     file->backing = DeimosStringBackedFlag;
     file->tab = 0;
@@ -153,6 +155,14 @@ FILE* deimos_get_file_struct(DeimosFile file) {
 
 AQString deimos_get_file_string(DeimosFile file) {
     return file->file_buffer;
+}
+
+DeimosFileModeFlag deimos_get_file_mode(DeimosFile file) {
+    return file->mode;
+}
+
+DeimosBackingFlag deimos_get_file_backing(DeimosFile file) {
+    return file->backing;
 }
 
 AQULong deimos_get_file_position(DeimosFile file) {
@@ -367,6 +377,172 @@ AQInt deimos_output_double(DeimosFile file, AQDouble value) {
     return deimos_internal_fprintf(file,"%.*lf",DECIMAL_DIG + 6,value);
 }
 
+AQByte deimos_get_binary_byte(DeimosFile file) {
+    return deimos_internal_fgetc(file);
+}
+
+AQInt deimos_output_binary_byte(DeimosFile file, AQByte byte) {
+    return deimos_internal_fputc(byte,file);
+}
+
+//base32*
+
+/*
+--set 1-- (+0)
+0-9 -- 0-9
+A-V -- 10 - 31
+--set 2--(+1)
+W-Z -- 0-3
+a-z -- 4-29
+& -- 30
+$ -- 31
+*/
+
+static AQInt deimos_internal_b32s_mapping(AQInt value) {    
+    if (value >= 0 && value <= 26)
+     return value + 33;
+    
+    if (value >= 33 && value <= 59)
+     return value - 33;
+     
+    if (value == 91) return 27; //[
+    if (value == 27) return 91;
+    
+    if (value == 93) return 28; //]
+    if (value == 28) return 93; 
+    
+    if (value == 123) return 29; //{
+    if (value == 29) return 123;
+    
+    if (value == 125) return 30; //}
+    if (value == 30) return 125;
+    
+    if (value == 64) return 31; //@
+    if (value == 31) return 64;
+    
+    return value;
+}
+
+static AQInt deimos_internal_b32s_set_1_encode(AQInt value) {
+    if (value >= 0 && value <= 9)
+     value = value + 48;
+     
+    if (value >= 10 && value <= 31)
+     value = value + 55;
+    
+    return value;
+}
+
+static AQInt deimos_internal_b32s_set_1_get_value(AQInt value) {
+    if (value >= 48 && value <= 57)
+     value = value - 48;
+     
+    if (value >= 65 && value <= 86)
+     value = value - 55;
+    
+    return value;
+}
+
+static AQInt deimos_internal_is_b32s_set_1(AQInt value) {
+    if (value >= 48 && value <= 57)
+     return 1;
+     
+    if (value >= 65 && value <= 86)
+     return 1;
+     
+    return 0;  
+}
+
+static AQInt deimos_internal_b32s_set_2_encode(AQInt value) {
+    if (value >= 0 && value <= 3)
+     value = value + 87;
+     
+    if (value >= 4 && value <= 29)
+     value = value + 93; 
+     
+    if (value == 30) value = 36;
+    if (value == 31) value = 38;
+  
+    return value;
+}
+
+static AQInt deimos_internal_b32s_set_2_get_value(AQInt value) {
+    if (value >= 87 && value <= 91)
+     value = value - 87;
+     
+    if (value >= 97 && value <= 122)
+     value = value - 93; 
+     
+    if (value == 36) value = 30; 
+    if (value == 38) value = 31;
+  
+    return value;
+}
+
+static AQInt deimos_internal_is_b32s_set_2(AQInt value) {
+    if (value >= 87 && value <= 91)
+     return 1;
+     
+    if (value >= 97 && value <= 122)
+      return 1; 
+     
+    if (value == 36) return 1;
+    if (value == 38) return 1;
+   
+    return 0;  
+}
+
+static void deimos_internal_b32s_encode_character(DeimosFile encoded_file, AQInt character) {
+    AQDouble A, B, C = 0;
+    if (character <= 31) {
+        deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(character));
+    }
+    if (character > 31) {
+        A = character / 32.0;
+        C = modf(A,&B);
+        A = 32 * C;
+        deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_2_encode(A));
+        deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(B));
+    }
+}
+
+AQInt deimos_get_base_32_star_encode(DeimosFile file_to_encode, DeimosFile encoded_file) {
+    AQInt character = 0;
+    while ((character = deimos_internal_fgetc(file_to_encode)) != EOF) {
+        deimos_internal_b32s_encode_character(encoded_file,deimos_internal_b32s_mapping(character));
+    }
+    return 1;
+}
+
+static AQInt deimos_internal_b32s_decode_character(DeimosFile encoded_file, AQInt character) {
+   if (deimos_internal_is_b32s_set_1(character))
+    return deimos_internal_b32s_set_1_get_value(character);
+  
+   if (deimos_internal_is_b32s_set_2(character)) {
+       AQInt next_character = deimos_internal_fgetc(encoded_file);
+       //printf("PRINT VAL B: %d\n",next_character);
+       if (next_character == EOF) return EOF;
+       if (!deimos_internal_is_b32s_set_1(next_character)) return EOF;
+       return deimos_internal_b32s_set_2_get_value(character) +
+        deimos_internal_b32s_set_1_get_value(next_character) * 32;
+   }
+   return character;
+}
+
+AQInt deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decoded_file) {
+    AQInt character = 0;
+    AQInt decoded_character = 0;
+    //printf("PRINT II: %s\n",aqstring_get_c_string(deimos_get_file_string(file_to_decode)));
+    while ((character = deimos_internal_fgetc(file_to_decode)) != EOF) {
+        //printf("PRINT VAL A: %d\n",character);
+        decoded_character = deimos_internal_b32s_decode_character(file_to_decode,character);
+        if (decoded_character == EOF) return EOF;
+        //printf("PRINT VAL: %d\n",deimos_internal_b32s_mapping(decoded_character));
+        deimos_output_binary_byte(decoded_file,deimos_internal_b32s_mapping(decoded_character)); 
+    }
+    return EOF;
+}
+
 AQInt deimos_get_utf32_character(DeimosFile file) {
     if ( file->mode != DeimosReadModeFlag ) return EOF;
     AQInt n = 0;
@@ -454,6 +630,14 @@ skip:
    return character;
 }
 
+void deimos_output_utf32_character(DeimosFile file, AQInt character) {
+    const AQInt* text = &character;
+    AQString string = aqstring_new_from_utf32(text,1);
+    AQChar* c_string = aqstring_get_c_string(string);
+    deimos_internal_fprintf(file,"%s",c_string);
+    free(c_string);
+}
+ 
  #ifdef _WIN32
   #define deimos_dlopen(file) LoadLibrary(file)
   #define deimos_dlclose(library) FreeLibrary((HMODULE)library)

@@ -277,7 +277,7 @@ void test_saturn(void) {
     printf("%s\n", "Hello World!!!");
     
     DeimosFile file = deimos_open_file("TEST.pro",DeimosWriteModeFlag);
-    DeimosFile file2 = deimos_get_file_from_string(aqstr(""),DeimosWriteModeFlag);
+    DeimosFile file2 = deimos_get_file_from_string(aqstr("",&allocator),DeimosWriteModeFlag);
     
     AQStore store99 = aqstore_new();
     AQArray array99 = aqarray_new();
@@ -328,9 +328,11 @@ void test_saturn(void) {
     AQString file_string = 
      aqstring_copy(deimos_get_file_string(file2));
     
+    AQString file_string_2 = aqstring_copy(file_string);
+    
     deimos_close_file(file2);
     
-    printf("PRINT: %s\n",aqstring_get_c_string(file_string));
+    printf("PRINT: %s",aqstring_get_c_string(file_string));
     
     file = deimos_open_file("TEST.pro",DeimosReadModeFlag,&allocator);
     AQStore test_data = (AQStore)prometheus_load_file(file);
@@ -345,6 +347,45 @@ void test_saturn(void) {
     aq_destroy(test_string);
     aq_destroy(test_mta_data);
     aq_destroy(file);
+    
+    file2 = deimos_get_file_from_string(file_string,DeimosReadModeFlag);
+    test_data = (AQStore)prometheus_load_file(file2);
+    if (test_data == NULL) puts("NO!!");
+    test_array = aqstore_get_item(test_data,"TESTDATA");
+    test_mta_data = aqarray_get_item(test_array,0);
+    aqmta_iterate_all_types_with(test_mta,test_mta_data);
+    test_string = aqarray_get_item(test_array,2);
+    printf("test_string 2 is %s\n",aqstring_get_c_string(test_string));
+    aq_destroy(test_array);
+    aq_destroy(test_data);
+    aq_destroy(test_string);
+    aq_destroy(test_mta_data);
+    aq_destroy(file2);
+    
+    DeimosFile file3 = deimos_get_file_from_string(file_string_2,DeimosReadModeFlag);
+    DeimosFile file4 = deimos_get_file_from_string(aqstr(""),DeimosWriteModeFlag);
+    deimos_get_base_32_star_encode(file3,file4);
+    
+    
+    AQString b32s_string = 
+     aqstring_copy(deimos_get_file_string(file4));
+    
+    printf("PRINT: %s\n",aqstring_get_c_string(b32s_string));
+    
+    aq_destroy(file3);
+    aq_destroy(file4);
+    
+    file3 = deimos_get_file_from_string(b32s_string,DeimosReadModeFlag);
+    file4 = deimos_get_file_from_string(aqstr(""),DeimosWriteModeFlag);
+    deimos_get_base_32_star_decode(file3,file4);
+    
+    b32s_string = 
+     aqstring_copy(deimos_get_file_string(file4));
+     
+    printf("PRINT: %s",aqstring_get_c_string(b32s_string));
+     
+    aq_destroy(file3);
+    aq_destroy(file4); 
     
     aq_print(c_string,"Hello Wordl!\n");
     aq_print(c_string,"And the number is: ");
