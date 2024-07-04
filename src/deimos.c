@@ -183,6 +183,14 @@ AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset) {
         deimos_get_file_position(file)-offset);
 }
 
+AQInt deimos_copy_file_to_file(DeimosFile file_to_copy, DeimosFile file_with_copied_data) {
+    AQInt character = 0;
+    while ((character = deimos_internal_fgetc(file_to_copy)) != EOF) {
+        deimos_output_character(file_with_copied_data,character); 
+    }
+    return EOF;
+}
+
 AQInt deimos_get_character(DeimosFile file) {
     return deimos_get_utf32_character(file);
 }
@@ -385,9 +393,16 @@ AQInt deimos_output_binary_byte(DeimosFile file, AQByte byte) {
     return deimos_internal_fputc(byte,file);
 }
 
-//base32*
-
 /*
+------------------------------------base32*----------------------------------------
+-----------------------------------------------------------------------------------
+Binary to text encoding, designed to be ideal for prometheus's serialization format.
+Encodes data in 1-2 bytes, or ascii characters. Maps more frequently used characters 
+in prometheus's serialization format, to be encoded in only one byte, that would
+otherwise require two. Two sets of 32 printable ascii characters are used. First set
+means no other byte is needed and the value can be determined, set 2 means its value
+is the ones place and the next character which must be of set 1 is in the 32s place.
+
 --set 1-- (+0)
 0-9 -- 0-9
 A-V -- 10 - 31
@@ -500,7 +515,7 @@ static void deimos_internal_b32s_encode_character(DeimosFile encoded_file, AQInt
     if (character > 31) {
         A = character / 32.0;
         C = modf(A,&B);
-        A = 32 * C;
+        A = C * 32;
         deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_2_encode(A));
         deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(B));
     }
@@ -517,27 +532,22 @@ AQInt deimos_get_base_32_star_encode(DeimosFile file_to_encode, DeimosFile encod
 static AQInt deimos_internal_b32s_decode_character(DeimosFile encoded_file, AQInt character) {
    if (deimos_internal_is_b32s_set_1(character))
     return deimos_internal_b32s_set_1_get_value(character);
-  
    if (deimos_internal_is_b32s_set_2(character)) {
        AQInt next_character = deimos_internal_fgetc(encoded_file);
-       //printf("PRINT VAL B: %d\n",next_character);
        if (next_character == EOF) return EOF;
        if (!deimos_internal_is_b32s_set_1(next_character)) return EOF;
        return deimos_internal_b32s_set_2_get_value(character) +
         deimos_internal_b32s_set_1_get_value(next_character) * 32;
    }
-   return character;
+   return EOF;
 }
 
 AQInt deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decoded_file) {
     AQInt character = 0;
     AQInt decoded_character = 0;
-    //printf("PRINT II: %s\n",aqstring_get_c_string(deimos_get_file_string(file_to_decode)));
     while ((character = deimos_internal_fgetc(file_to_decode)) != EOF) {
-        //printf("PRINT VAL A: %d\n",character);
         decoded_character = deimos_internal_b32s_decode_character(file_to_decode,character);
         if (decoded_character == EOF) return EOF;
-        //printf("PRINT VAL: %d\n",deimos_internal_b32s_mapping(decoded_character));
         deimos_output_binary_byte(decoded_file,deimos_internal_b32s_mapping(decoded_character)); 
     }
     return EOF;

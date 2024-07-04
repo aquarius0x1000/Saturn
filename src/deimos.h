@@ -37,6 +37,8 @@ AQInt deimos_set_file_position(DeimosFile file, AQULong position);
 AQInt deimos_advance_file_position(DeimosFile file, AQULong offset);
 AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset);
 
+AQInt deimos_copy_file_to_file(DeimosFile file_to_copy, DeimosFile file_with_copied_data);
+
 AQInt deimos_get_character(DeimosFile file);
 AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end);
 AQByte deimos_get_byte(DeimosFile file);
