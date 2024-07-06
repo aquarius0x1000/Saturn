@@ -401,7 +401,7 @@ Encodes data in 1-2 bytes, or ascii characters. Maps more frequently used charac
 in prometheus's serialization format, to be encoded in only one byte, that would
 otherwise require two. Two sets of 32 printable ascii characters are used. First set
 means no other byte is needed and the value can be determined, set 2 means its value
-is the ones place and the next character which must be of set 1 is in the 32s place.
+is the one's place and the next character which must be of set 1 is in the 32's place.
 
 --set 1-- (+0)
 0-9 -- 0-9
