@@ -186,7 +186,7 @@ AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset) {
 AQInt deimos_copy_file_to_file(DeimosFile file_to_copy, DeimosFile file_with_copied_data) {
     AQInt character = 0;
     while ((character = deimos_internal_fgetc(file_to_copy)) != EOF) {
-        deimos_output_character(file_with_copied_data,character); 
+        if (deimos_output_character(file_with_copied_data,character) == EOF) return EOF; 
     }
     return 0;
 }
