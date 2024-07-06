@@ -10,7 +10,7 @@ Saturn as of now consists of :
 
 - aquarius - Basic data structure and math library.
 
-- deimos - Very basic file I/O, and management library. 
+- deimos - Very basic file I/O, supports string backed files, and a binary-to-text encoding, base32*.
 
 Work in progress:
 
