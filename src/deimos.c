@@ -188,7 +188,7 @@ AQInt deimos_copy_file_to_file(DeimosFile file_to_copy, DeimosFile file_with_cop
     while ((character = deimos_internal_fgetc(file_to_copy)) != EOF) {
         deimos_output_character(file_with_copied_data,character); 
     }
-    return EOF;
+    return 0;
 }
 
 AQInt deimos_get_character(DeimosFile file) {
