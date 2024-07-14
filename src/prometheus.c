@@ -1,11 +1,36 @@
 #include "prometheus.h"
 
+static AQInt prometheus_internal_output_string(DeimosFile file, 
+ AQDataStructure ds, ProGetStringFuncType get_string) {
+    AQInt result = 0; 
+    result = deimos_output_character(file,'"');
+    result = deimos_output_string(file,get_string(ds));
+    result = deimos_output_character(file,'"');
+    if (result == EOF) return 0;
+    return 1;
+ }
+ 
+ static AQInt prometheus_internal_output_list(DeimosFile file, 
+ AQDataStructure ds, ProGetValueFuncType get_value) {
+    AQInt result = 0;
+    AQMTAContainer container;
+    deimos_output_character(file,'(');
+   next: 
+    result = get_value(ds,&container);
+    //switch
+    if (result) deimos_output_character(file,',');
+    if (result) goto next;
+    deimos_output_character(file,')'); 
+    return 1;
+ }
+
+
 static AQInt pro_output_container(DeimosFile file,
-     AQDataStructure data, AQChar* label, AQTypeFlag flag_type_for_values);
+ AQDataStructure data, AQChar* label, AQTypeFlag flag_type_for_values);
 
 static void pro_output_list(DeimosFile file,
-     AQDataStructureFlag flag, AQDataStructure data,
-      AQTypeFlag flag_type_for_values) {
+ AQDataStructureFlag flag, AQDataStructure data,
+  AQTypeFlag flag_type_for_values) {
     deimos_output_character(file,'(');
     if (flag == AQMTAContainerFlag) {
         AQMTAContainer* container = ((AQMTAContainer*)data);
