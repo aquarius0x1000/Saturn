@@ -647,7 +647,7 @@ skip:
    return character;
 }
 
-void deimos_output_utf32_character(DeimosFile file, AQInt character) {
+AQInt deimos_output_utf32_character(DeimosFile file, AQInt character) {
     const AQInt* text = &character;
     AQString string = aqstring_new_from_utf32(text,1);
     AQChar* c_string = aqstring_get_c_string(string);

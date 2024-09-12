@@ -77,7 +77,7 @@ AQInt deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decod
 AQInt deimos_get_utf32_character(DeimosFile file);
 AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset);
 AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset);
-void deimos_output_utf32_character(DeimosFile file, AQInt character);
+AQInt deimos_output_utf32_character(DeimosFile file, AQInt character);
 
 AQAny deimos_load_library_file(const AQChar* filepath);
 AQInt deimos_free_library(AQAny library);

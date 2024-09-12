@@ -1,29 +1,106 @@
 #include "prometheus.h"
-
-static AQInt prometheus_internal_output_string(DeimosFile file, 
- AQDataStructure ds, ProGetStringFuncType get_string) {
-    AQInt result = 0; 
-    result = deimos_output_character(file,'"');
-    result = deimos_output_string(file,get_string(ds));
-    result = deimos_output_character(file,'"');
-    if (result == EOF) return 0;
-    return 1;
- }
  
- static AQInt prometheus_internal_output_list(DeimosFile file, 
- AQDataStructure ds, ProGetValueFuncType get_value) {
+struct Prometheus_s {
+  DeimosFile file;
+  AQStore types;     
+};
+ 
+Prometheus prometheus_new(DeimosFile file) {
+    Prometheus prometheus = aq_new(struct Prometheus_s);
+    prometheus->file = file;
+    prometheus->types = aqstore_new();
+    return prometheus;
+}
+ 
+void prometheus_destroy(Prometheus prometheus) {
+    aqstore_destroy(prometheus->types);
+    free(prometheus);
+} 
+ 
+ static AQInt prometheus_internal_output_list(DeimosFile file, AQDataStructure ds, 
+  PrometheusGetValueLambda get_value) {
     AQInt result = 0;
     AQMTAContainer container;
     deimos_output_character(file,'(');
    next: 
     result = get_value(ds,&container);
-    //switch
+    switch(container.type) {
+            case AQByteFlag:
+              deimos_output_byte(file,container.AQByteVal);
+            break;
+            case AQSByteFlag:
+              deimos_output_sbyte(file,container.AQSByteVal);
+            break;
+            case AQShortFlag:
+              deimos_output_short(file,container.AQShortVal);
+            break;
+            case AQUShortFlag:
+              deimos_output_ushort(file,container.AQUShortVal);
+            break;
+            case AQIntFlag:
+              deimos_output_integer(file,container.AQIntVal);
+            break;
+            case AQUIntFlag:
+              deimos_output_uinteger(file,container.AQUIntVal);
+            break;
+            case AQLongFlag:
+              deimos_output_long(file,container.AQLongVal);
+            break;
+            case AQULongFlag:
+              deimos_output_ulong(file,container.AQULongVal);
+            break;
+            case AQFloatFlag:
+              deimos_output_float(file,container.AQFloatVal);
+            break;
+            case AQDoubleFlag:
+              deimos_output_double(file,container.AQDoubleVal);
+            break;
+             case AQAnyFlag:
+              deimos_output_character(file,'"');
+              deimos_output_string(file,container.AQAnyVal);
+              deimos_output_character(file,'"');
+            break;
+            default:
+            break;
+        }
     if (result) deimos_output_character(file,',');
     if (result) goto next;
     deimos_output_character(file,')'); 
     return 1;
  }
+ 
+static AQInt prometheus_internal_output_block(DeimosFile file, AQDataStructure ds, 
+ PrometheusGetBlockLambda get_block) {
+    AQInt result = 0;
+    deimos_output_character(file,'{');
+    deimos_output_character(file,'\n');    
+    deimos_output_add_to_tab(file,1);    
+   loop:    
+    result = get_block(ds);
+    if (result == PRO_BLOCK_NOT_DONE) goto loop;
+    if (result != PRO_BLOCK_DONE) return 0;
+    deimos_output_sub_from_tab(file,1);
+    deimos_output_tab(file);
+    deimos_output_character(file,'}');
+ } 
 
+static AQInt prometheus_internal_output_container(DeimosFile file, AQChar* label, AQDataStructure ds,
+PrometheusGetContainerLambda get_container) {
+    deimos_output_tab(file);  
+    deimos_output_character(file,'[');
+    if (label != NULL) {
+        deimos_output_string(file,label);
+        deimos_output_character(file,',');
+    }
+    deimos_output_character(file,']'); 
+    deimos_output_character(file,' ');
+    deimos_output_character(file,':');
+    deimos_output_character(file,' ');
+    get_container(file,ds,prometheus_internal_output_list,prometheus_internal_output_block);
+    deimos_output_character(file,';'); 
+    deimos_output_character(file,'\n');     
+    return 1; 
+}
 
 static AQInt pro_output_container(DeimosFile file,
  AQDataStructure data, AQChar* label, AQTypeFlag flag_type_for_values);
@@ -252,7 +329,7 @@ static AQInt pro_output_container(DeimosFile file,
     deimos_output_character(file,':');
     deimos_output_character(file,' ');
     pro_output_block(file,flag,data,flag_type_for_values);
-    return 0;  
+    return 1;  
 }
 
 AQInt prometheus_output_file(DeimosFile file, AQDataStructure data) {
