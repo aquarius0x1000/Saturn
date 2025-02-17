@@ -391,6 +391,61 @@ void test_saturn(void) {
     aq_print(c_string,"And the number is: ");
     aq_print(ulong,38475893L);
     aq_print(c_string,".\n");
+    
+    file = deimos_open_file("TEST2.pro",DeimosWriteModeFlag,&allocator);
+    AQArray array999 = aqarray_new();
+    AQArray array1000 = aqarray_new();
+    AQArray array1001 = aqarray_new();
+    AQArray array1002 = aqarray_new();
+    
+    aqarray_add_item(array999,array1000);
+    aqarray_add_item(array999,array1001);
+    aqarray_add_item(array999,array1002);
+    
+    AQArray array2999 = aqarray_new();
+    AQMultiTypeArray mta2999 = aqmta_new();
+    AQMultiTypeArray mta2000 = aqmta_new();
+    AQString string2999 = aqstr("Hello World!!!!");
+    aq_mta_add_item(AQInt,mta2999,42);
+    aq_mta_add_item(AQInt,mta2999,958754);
+    aq_mta_add_item(AQInt,mta2999,255);
+    aq_mta_add_item(AQFloat,mta2999,255.0255f);
+    aq_mta_add_item(AQDouble,mta2999,255.0255);
+    
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2999,0));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2999,1));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2999,2));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2999,0));
+    
+    aqmta_iterate_all_types_with(test_mta,mta2999);
+    
+    aq_mta_add_item(AQByte,mta2000,255);
+    aq_mta_add_item(AQByte,mta2000,155);
+    aq_mta_add_item(AQInt,mta2000,420);
+    aq_mta_add_item(AQInt,mta2000,9587540);
+    aq_mta_add_item(AQInt,mta2000,2550);
+    aq_mta_add_item(AQAny,mta2000,string2999);
+    
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2000,0));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2000,1));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2000,2));
+    printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2000,0));
+    
+    
+    aqarray_add_item(array2999,mta2999);
+    aqarray_add_item(array2999,mta2000);
+    aqarray_add_item(array2999,string2999);
+    
+     aqarray_add_item(array999,array2999);
+    
+    //prometheus_output_file(file,(AQDataStructure)array999);
+    prometheus_serialize(file,(PrometheusDataStructure)array999);
+    
+    aq_destroy(array999);
+    aq_destroy(array1000);
+    aq_destroy(array1001);
+    aq_destroy(array1002);
+    aq_destroy(file);
 }
 
 int main(int argc, const char **argv) {

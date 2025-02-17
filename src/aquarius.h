@@ -16,6 +16,7 @@
 #ifdef __GNUC__
  #pragma GCC diagnostic ignored "-Wunused-value"
  #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+ #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 #endif
 #ifdef __clang__
  #pragma clang diagnostic ignored "-Wunused-value"
@@ -129,6 +130,10 @@ typedef enum {
   AQMTAContainerFlag,
   AQStoreFlag,
 } AQDataStructureFlag;
+ 
+#define AQ_DATA_STRUCTURE_BASE_CLASS\
+ AQDataStructureFlag flag;\
+ AQDestroyerFuncType destroyer; 
  
 typedef struct AQDataStructure_s* AQDataStructure;
 typedef struct AQArray_s* AQArray;

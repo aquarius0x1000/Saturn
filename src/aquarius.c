@@ -1,21 +1,18 @@
 #include "aquarius.h"
 
 struct AQDataStructure_s {
-  AQDataStructureFlag flag;
-  AQDestroyerFuncType destroyer;
+ AQ_DATA_STRUCTURE_BASE_CLASS
 };
 
 struct AQArray_s {
-  AQDataStructureFlag flag;
-  AQDestroyerFuncType destroyer;
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQAllocator allocator;  
   AQAny* items;
   AQULong num_of_items;
 };
 
 struct AQString_s {
-  AQDataStructureFlag flag;
-  AQDestroyerFuncType destroyer;
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQAllocator allocator;
   AQLong size_in_characters;
   AQULong size_in_bytes;
@@ -23,8 +20,7 @@ struct AQString_s {
  };
 
  struct AQListNode_s {
-   AQDataStructureFlag flag;
-   AQDestroyerFuncType destroyer;    
+   AQ_DATA_STRUCTURE_BASE_CLASS   
    struct AQListNode_s* before;
    struct AQListNode_s* after;
    AQAny data;
@@ -32,8 +28,7 @@ struct AQString_s {
  };
 
  struct AQList_s {
-   AQDataStructureFlag flag;
-   AQDestroyerFuncType destroyer;
+   AQ_DATA_STRUCTURE_BASE_CLASS
    AQAllocator allocator;
    AQULong num_of_nodes;
    AQListNode first;
@@ -41,14 +36,12 @@ struct AQString_s {
 };
 
 struct AQStack_s {
-  AQDataStructureFlag flag;
-  AQDestroyerFuncType destroyer;
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQList list;
 };
 
 struct AQStackBuffer_s {
-  AQDataStructureFlag flag;  
-  AQDestroyerFuncType destroyer;
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQArray buffer;
   AQULong index;
   AQULong count;
@@ -56,16 +49,14 @@ struct AQStackBuffer_s {
 };
 
 struct AQMultiTypeArray_s {
-  AQDataStructureFlag flag; 
-  AQDestroyerFuncType destroyer; 
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQAllocator allocator;
   AQAny item_arrays[11];
   AQULong num_of_items[11];
 };
 
 struct AQMTAStackBuffer_s {
-  AQDataStructureFlag flag;  
-  AQDestroyerFuncType destroyer;
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQMultiTypeArray data_buffer;
   AQTypeFlag* type_buffer;
   AQULong type_buffer_size;
@@ -82,8 +73,7 @@ typedef struct AQStoreBinaryNode_s {
 } AQStoreBinaryNode;
 
 struct AQStore_s {
-  AQDataStructureFlag flag;
-  AQDestroyerFuncType destroyer;
+  AQ_DATA_STRUCTURE_BASE_CLASS
   AQAllocator allocator;
   AQStoreBinaryNode* dictionary;
   AQList items;
