@@ -436,11 +436,18 @@ void test_saturn(void) {
     aqarray_add_item(array2999,mta2000);
     aqarray_add_item(array2999,string2999);
     
-     aqarray_add_item(array999,array2999);
+    aqarray_add_item(array999,array2999);
+     
+    AQStore store500 = aqstore_new();
+    
+    aqstore_add_item(store500,array999,"THE ARRAY");
     
     //prometheus_output_file(file,(AQDataStructure)array999);
     prometheus_serialize(file,(PrometheusDataStructure)array999);
     
+    prometheus_serialize(file,(PrometheusDataStructure)store500);
+    
+    aq_destroy(store500);
     aq_destroy(array999);
     aq_destroy(array1000);
     aq_destroy(array1001);

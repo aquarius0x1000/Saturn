@@ -102,7 +102,9 @@ static AQInt prometheus_internal_output_container(DeimosFile file, AQChar* label
     deimos_output_tab(file);  
     deimos_output_character(file,'[');
     if (label != NULL) {
-        deimos_output_string(file,label);
+        deimos_output_character(file,'"');
+        deimos_output_string(file,aqstring_get_c_string(label));
+        deimos_output_character(file,'"');
         deimos_output_character(file,',');
     }
     deimos_output_string(file,type);
@@ -184,7 +186,7 @@ static AQInt prometheus_internal_output_mta_container(DeimosFile file, AQDataStr
     return print_block(file,ds,prometheus_internal_output_mta_block);
 }
 
-static AQInt prometheus_internal_get_text_for_list(AQDataStructure ds, AQULong* index,\
+static AQInt prometheus_internal_get_text_for_list(AQDataStructure ds, AQULong* index,
  AQMTAContainer* container) {
     AQULong i = *index; 
     AQMTAContainer the_container;
@@ -202,14 +204,22 @@ static AQInt prometheus_internal_output_text_container(DeimosFile file, AQDataSt
     return print_list(file,ds,prometheus_internal_get_text_for_list);
 }
 
-AQInt prometheus_output_container(DeimosFile file, AQChar* label, 
- AQChar* type, AQDataStructure ds, PrometheusOutputContainerLambda output_container) {
-     return prometheus_internal_output_container(file,label,type,ds,output_container);
+static AQInt prometheus_internal_output_store_block(DeimosFile file, AQDataStructure ds) {
+    aq_store_foreach(node,ds) {
+       prometheus_internal_serialize(file,
+           aqstore_label_from_list_node(node),aqlist_get_item(node)); 
+    }
+    return PROMETHEUS_BLOCK_DONE;
+}
+
+static AQInt prometheus_internal_output_store_container(DeimosFile file, AQDataStructure ds, 
+ PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block) {
+    return print_block(file,ds,prometheus_internal_output_store_block);
 }
 
 static AQInt prometheus_internal_serialize(DeimosFile file, AQChar* label, PrometheusDataStructure ds) {
     if (ds->flag == AQDestroyableFlag) {
-        if (ds->serialize != NULL) ds->serialize(file,label,ds);
+        if (ds->serialize != NULL) ds->serialize(file,label,ds,prometheus_internal_output_container);
     }
     switch (ds->flag) {
         case AQArrayFlag:
@@ -222,6 +232,10 @@ static AQInt prometheus_internal_serialize(DeimosFile file, AQChar* label, Prome
         
         case AQStringFlag:
          prometheus_internal_output_container(file,label,"@Text",ds,prometheus_internal_output_text_container);
+        break;
+        
+        case AQStoreFlag:
+         prometheus_internal_output_container(file,label,"@Store",ds,prometheus_internal_output_store_container);
         break;
         
         default:

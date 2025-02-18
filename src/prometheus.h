@@ -21,7 +21,9 @@ typedef AQInt (*PrometheusPrintBlockLambda)(DeimosFile file, AQDataStructure ds,
  PrometheusOutputBlockLambda output_block);  
 typedef AQInt (*PrometheusOutputContainerLambda)(DeimosFile file, AQDataStructure ds, 
     PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block);
-typedef AQInt (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDataStructure ds);
+typedef AQInt (*PrometheusAccessOutputContainerLambda)(DeimosFile file, AQChar* label, 
+ AQChar* type, AQDataStructure ds, PrometheusOutputContainerLambda output_container);    
+typedef AQInt (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDataStructure ds, PrometheusAccessOutputContainerLambda output_container);
 
 #define PROMETHEUS_SERIALIZATION_BASE_CLASS\
  AQ_DATA_STRUCTURE_BASE_CLASS\
