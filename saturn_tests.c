@@ -21,6 +21,51 @@ void test_mta(AQAny data) {
     if (iterator_item_AQByte == 255) puts("YES!!!!!255");
 }
 
+typedef struct {
+  PROMETHEUS_SERIALIZATION_BASE_CLASS
+  AQInt count;
+} TestDataStructure;
+
+void destroy_TestDataStructure(AQDataStructure ds) {
+   free(ds);
+}
+
+AQInt get_count_for_TestDataStructure(AQDataStructure ds, AQULong* index,
+ AQMTAContainer* container) {
+    AQULong i = *index;
+    TestDataStructure* test = ds;
+    if (i >= test->count) return PROMETHEUS_LIST_DONE;
+    AQMTAContainer the_container;
+    the_container.flag = AQMTAContainerFlag;
+    the_container.type = AQIntFlag;
+    the_container.AQIntVal = i+1;
+    *container = the_container;
+    i++;
+    *index = i;
+    return PROMETHEUS_LIST_NOT_DONE;
+}
+
+AQInt output_container_TestDataStructure(DeimosFile file, AQDataStructure ds, 
+ PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block) {
+    return print_list(file,ds,get_count_for_TestDataStructure);
+}
+
+AQInt serialize_TestDataStructure(DeimosFile file, AQChar* label, AQDataStructure ds,
+ PrometheusAccessOutputContainerLambda output_container) {
+    output_container(file,label,aqstr("#TestDataStructure"),
+        ds,output_container_TestDataStructure);
+    return 1;
+}
+
+TestDataStructure* new_TestDataStructure(AQInt count) {
+    TestDataStructure* ds = aq_new(TestDataStructure);
+    ds->flag = AQDestroyableFlag;
+    ds->destroyer = destroy_TestDataStructure;
+    ds->serialize = serialize_TestDataStructure;
+    ds->count = count;
+    return ds;
+}
+
 void test_saturn(void) {
     AQArray array = aq_new_array();
     int number = 1;
@@ -431,10 +476,19 @@ void test_saturn(void) {
     printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2000,2));
     printf("MTA: %d\n",aq_mta_get_item(AQInt,mta2000,0));
     
+    TestDataStructure* ds500 = new_TestDataStructure(5);
+    
+    AQMTAContainer* container = aq_new(AQMTAContainer);
+    container->flag = AQMTAContainerFlag;
+    container->type = AQIntFlag;
+    container->AQIntVal = 999;
     
     aqarray_add_item(array2999,mta2999);
     aqarray_add_item(array2999,mta2000);
     aqarray_add_item(array2999,string2999);
+    aqarray_add_item(array2999,ds500);
+    aqarray_add_item(array2999,container);
+    
     
     aqarray_add_item(array999,array2999);
      
@@ -447,6 +501,8 @@ void test_saturn(void) {
     
     prometheus_serialize(file,(PrometheusDataStructure)store500);
     
+    free(container);
+    aq_destroy(ds500);
     aq_destroy(store500);
     aq_destroy(array999);
     aq_destroy(array1000);

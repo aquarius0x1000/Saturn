@@ -1963,7 +1963,7 @@ void aqmath_min_max3(AQFloat* min, AQFloat* max, const AQFloat3 v0) {
     }
 }
 
- void aqmath_clamp3(AQFloat3 v0, const AQFloat min, const AQFloat max) {
+void aqmath_clamp3(AQFloat3 v0, const AQFloat min, const AQFloat max) {
     int i = 0;
     while ( i < 3 ) {
         v0[i] = ( v0[i] > max ) ? max : v0[i];
@@ -1994,10 +1994,10 @@ void aqmath_min_max4(AQFloat* min, AQFloat* max, const AQFloat4 v0) {
 
 AQFloat4x4 aqmath_identity_matrix(void) {
     AQFloat4x4 matrix = { .matrix = {
-                           {1,0,0,0},
-                           {0,1,0,0},
-                           {0,0,1,0},
-                           {0,0,0,1}
+                            {1,0,0,0},
+                            {0,1,0,0},
+                            {0,0,1,0},
+                            {0,0,0,1}
                           }
                         };
     return matrix;
