@@ -28,6 +28,7 @@ DeimosFile deimos_get_file_from_string(AQString string,
   DeimosFileModeFlag mode);     
 void deimos_close_file(DeimosFile file);
 
+AQAllocator deimos_get_allocator(DeimosFile file);
 FILE* deimos_get_file_struct(DeimosFile file);
 AQString deimos_get_file_string(DeimosFile file);
 DeimosFileModeFlag deimos_get_file_mode(DeimosFile file);

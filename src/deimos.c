@@ -149,6 +149,10 @@ void deimos_close_file(DeimosFile file) {
     aq_free(file,file->allocator);
 }
 
+AQAllocator deimos_get_allocator(DeimosFile file) {
+    return file->allocator;  
+}
+
 FILE* deimos_get_file_struct(DeimosFile file) {
     return file->file_struct;
 }
@@ -650,7 +654,7 @@ skip:
 AQInt deimos_output_utf32_character(DeimosFile file, AQInt character) {
     const AQInt* text = &character;
     AQString string = aqstring_new_from_utf32(text,1);
-    AQChar* c_string = aqstring_get_c_string(string);
+    AQChar* c_string = aqstring_convert_to_c_string(string);
     if (deimos_internal_fprintf(file,"%s",c_string) == EOF) 
      return EOF;
     free(c_string);

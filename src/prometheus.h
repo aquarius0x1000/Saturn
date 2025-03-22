@@ -25,6 +25,16 @@ typedef AQInt (*PrometheusAccessOutputContainerLambda)(DeimosFile file, AQChar* 
  AQString type, AQDataStructure ds, PrometheusOutputContainerLambda output_container);    
 typedef AQInt (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDataStructure ds,
  PrometheusAccessOutputContainerLambda output_container);
+typedef AQInt (*PrometheusProcessValueLambda)(AQDataStructure ds, AQULong index, 
+ AQMTAContainer* container);
+typedef AQDataStructure (*PrometheusAccessBlockGeneratorLambda)(PrometheusDeserializer deserializer, 
+ AQChar* adder_type, AQDataStructure ds);
+typedef AQDataStructure (*PrometheusAccessValueGeneratorLambda)(PrometheusDeserializer deserializer, 
+ AQDataStructure ds, PrometheusProcessValueLambda process_value, AQTypeFlag* type_array, AQULong type_count); 
+typedef AQDataStructure (*PrometheusGeneratorLambda)(PrometheusDeserializer deserializer, 
+ AQChar* adder_type, PrometheusAccessBlockGeneratorLambda block_generator,
+ PrometheusAccessValueGeneratorLambda value_generator);
+typedef AQDataStructure (*PrometheusAdderLambda)(AQDataStructure ds, AQDataStructure ds_to_add, AQChar* label);
 
 #define PROMETHEUS_SERIALIZATION_BASE_CLASS\
  AQ_DATA_STRUCTURE_BASE_CLASS\
@@ -32,6 +42,7 @@ typedef AQInt (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDa
  
  
 AQInt prometheus_serialize(DeimosFile file, PrometheusDataStructure ds);
+AQInt prometheus_serialize_with_label(DeimosFile file, AQString label, PrometheusDataStructure ds);
 
 AQInt prometheus_output_file(DeimosFile file, AQDataStructure data);
 AQDataStructure prometheus_load_file(DeimosFile file);
