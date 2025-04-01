@@ -50,7 +50,4 @@ AQInt prometheus_register_deserializer(PrometheusDeserializer deserializer, AQSt
  PrometheusGeneratorLambda generator, PrometheusAdderLambda adder);
 AQDataStructure prometheus_deserialize(PrometheusDeserializer deserializer);
 
-AQInt prometheus_output_file(DeimosFile file, AQDataStructure data);
-AQDataStructure prometheus_load_file(DeimosFile file);
-
 #endif /* prometheus_h */

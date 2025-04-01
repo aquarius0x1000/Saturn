@@ -381,8 +381,8 @@ void test_saturn(void) {
     
     aqstore_add_item(store99,array99,"TESTDATA");
     
-    prometheus_output_file(file,(AQDataStructure)store99);
-    prometheus_output_file(file2,(AQDataStructure)store99);
+    prometheus_serialize(file,(AQDataStructure)store99);
+    prometheus_serialize(file2,(AQDataStructure)store99);
     
     aqstring_destroy(string99);
     aqmta_destroy(mta99);
@@ -402,7 +402,8 @@ void test_saturn(void) {
     printf("PRINT: %s",aqstring_get_c_string(file_string));
     
     file = deimos_open_file("TEST.pro",DeimosReadModeFlag,&allocator);
-    AQStore test_data = (AQStore)prometheus_load_file(file);
+    PrometheusDeserializer the_deserializer = prometheus_deserializer_new(file);
+    AQStore test_data = (AQStore)prometheus_deserialize(the_deserializer);
     if (test_data == NULL) puts("NO!");
     AQArray test_array = aqstore_get_item(test_data,"TESTDATA");
     AQMultiTypeArray test_mta_data = aqarray_get_item(test_array,0);
@@ -413,10 +414,12 @@ void test_saturn(void) {
     aq_destroy(test_data);
     aq_destroy(test_string);
     aq_destroy(test_mta_data);
+    aq_destroy(the_deserializer);
     aq_destroy(file);
     
     file2 = deimos_get_file_from_string(file_string,DeimosReadModeFlag);
-    test_data = (AQStore)prometheus_load_file(file2);
+    the_deserializer = prometheus_deserializer_new(file);
+    test_data = (AQStore)prometheus_deserialize(the_deserializer);
     if (test_data == NULL) puts("NO!!");
     test_array = aqstore_get_item(test_data,"TESTDATA");
     test_mta_data = aqarray_get_item(test_array,0);
@@ -427,6 +430,7 @@ void test_saturn(void) {
     aq_destroy(test_data);
     aq_destroy(test_string);
     aq_destroy(test_mta_data);
+    aq_destroy(the_deserializer);
     aq_destroy(file2);
     
     DeimosFile file3 = deimos_get_file_from_string(file_string_2,DeimosReadModeFlag);
@@ -518,7 +522,6 @@ void test_saturn(void) {
     
     aqstore_add_item(store500,array999,"THE ARRAY");
     
-    //prometheus_output_file(file,(AQDataStructure)array999);
     prometheus_serialize(file,(PrometheusDataStructure)array999);
     
     prometheus_serialize(file,(PrometheusDataStructure)store500);
