@@ -66,6 +66,28 @@ TestDataStructure* new_TestDataStructure(AQInt count) {
     return ds;
 }
 
+AQInt process_TestDataStructure(AQDataStructure ds, AQTypeFlag* type, AQULong* index,
+ AQMTAContainer* container) {
+    *index = -1;
+    ((TestDataStructure*)ds)->count = container->AQIntVal;
+    return 1;
+}
+
+AQDataStructure generator_TestDataStructure(PrometheusDeserializer deserializer, 
+  AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
+   PrometheusAccessValueGeneratorLambda value_generator) {
+     AQDataStructure ds_to_add = new_TestDataStructure(0);
+      ds_to_add = value_generator(deserializer,ds_to_add,
+       process_TestDataStructure,(AQTypeFlag[]){AQIntFlag},1);
+     if (ds_to_add == NULL) return NULL;
+     return ds_to_add;
+}
+
+AQDataStructure adder_TestDataStructure(AQDataStructure ds,
+ AQDataStructure ds_to_add, AQChar* label) {
+    return ds_to_add;
+}
+
 void test_saturn(void) {
     AQArray array = aq_new_array();
     int number = 1;
@@ -509,6 +531,61 @@ void test_saturn(void) {
     aq_destroy(array1001);
     aq_destroy(array1002);
     aq_destroy(file);
+    
+    file = deimos_open_file("TEST2.pro",DeimosReadModeFlag);
+    PrometheusDeserializer deserializer = prometheus_deserializer_new(file);
+    prometheus_register_deserializer(deserializer,aqstr("#TestDataStructure"),
+     generator_TestDataStructure,adder_TestDataStructure);
+    AQDataStructure aq_data_structure = prometheus_deserialize(deserializer);
+    if (aq_data_structure == NULL) puts("aq_data_structure is null!");
+    if (aqds_get_flag(aq_data_structure) == AQArrayFlag) puts("aq_data_structure is array!");
+    if (aqds_get_flag(aq_data_structure) == AQStoreFlag) puts("aq_data_structure is store!");
+    
+    aq_array_foreach(index,aq_data_structure) {
+        AQDataStructure ds = aqarray_get_item(aq_data_structure,index);
+        if (ds == NULL) printf("ds is null, and index is: %d\n",index);
+        if (ds != NULL) {
+            if (aqds_get_flag(ds) == AQArrayFlag) puts("aq_data_structure is array!2");
+            if (aqds_get_flag(ds) == AQStoreFlag) puts("aq_data_structure is store!2");
+            
+            if (aqds_get_flag(ds) == AQArrayFlag) {
+                aq_array_foreach(index2,ds) {
+                    AQDataStructure ds2 = aqarray_get_item(ds,index2);
+                    if (aqds_get_flag(ds2) == AQArrayFlag) puts("ds2 is array!2");
+                    if (aqds_get_flag(ds2) == AQStoreFlag) puts("ds2 is store!2");
+                }
+            }
+            
+            if (aqds_get_flag(ds) == AQStoreFlag) {
+                aq_store_foreach(node,ds) {
+                    AQDataStructure ds2 = aqlist_get_item(node);
+                    if (aqds_get_flag(ds2) == AQArrayFlag) puts("ds2 is array!2");
+                    if (aqds_get_flag(ds2) == AQStoreFlag) puts("ds2 is store!2");
+                    if (aqds_get_flag(ds2) == AQArrayFlag) {
+                        aq_array_foreach(index3,ds2) {
+                            AQDataStructure ds3 = aqarray_get_item(ds2,index3);
+                            if (aqds_get_flag(ds3) == AQArrayFlag) puts("ds3 is array!3");
+                            if (aqds_get_flag(ds3) == AQStoreFlag) puts("ds3 is store!3");
+                        }
+                    }
+                }
+            }
+         }
+    }
+    
+    DeimosFile file999 = 
+     deimos_get_file_from_string(aqstr("",&allocator),DeimosWriteModeFlag);
+    prometheus_serialize(file999,(PrometheusDataStructure)aqarray_get_item(aq_data_structure,0));
+    prometheus_serialize(file999,(PrometheusDataStructure)aqarray_get_item(aq_data_structure,1));
+    AQString file_string_999 = 
+     aqstring_copy(deimos_get_file_string(file999));
+    
+    printf("PRINT FILE STRING: %s\n",aqstring_get_c_string(file_string_999));
+    
+    aq_destroy(file);
+    aq_destroy(file999);
+    aq_destroy(file_string_999);
+    aq_destroy(deserializer);
 }
 
 int main(int argc, const char **argv) {

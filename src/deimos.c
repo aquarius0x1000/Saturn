@@ -40,8 +40,8 @@ static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
     if (file->backing == DeimosFileBackedFlag)
      result = vfprintf(file->file_struct,format,args);
     if (file->backing == DeimosStringBackedFlag) {
-     if ( file->index+100 >= aqstring_get_size(file->file_buffer) )   
-      aqstring_expand(file->file_buffer,100);       
+     if ( file->index+1000 >= aqstring_get_size(file->file_buffer) )   
+      aqstring_expand(file->file_buffer,1000);       
      if ( file->index > aqstring_get_size(file->file_buffer) ) result = EOF;
      if ( file->index < 0 ) result = EOF;
      if (result == EOF) goto end;
@@ -640,10 +640,10 @@ skip:
 }
 
 AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset) {
-   AQULong file_position = deimos_get_file_position(file);
-skip: 
+   AQULong file_position = deimos_get_file_position(file);   
    AQULong last = file_position - (1+offset);
    deimos_set_file_position(file,last);
+skip:   
    AQInt character = deimos_get_utf32_character(file);
    if (character == EOF) return EOF;
    if (isspace(character)) goto skip;

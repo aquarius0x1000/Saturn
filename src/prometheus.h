@@ -25,14 +25,14 @@ typedef AQInt (*PrometheusAccessOutputContainerLambda)(DeimosFile file, AQChar* 
  AQString type, AQDataStructure ds, PrometheusOutputContainerLambda output_container);    
 typedef AQInt (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDataStructure ds,
  PrometheusAccessOutputContainerLambda output_container);
-typedef AQInt (*PrometheusProcessValueLambda)(AQDataStructure ds, AQULong index, 
+typedef AQInt (*PrometheusProcessValueLambda)(AQDataStructure ds, AQTypeFlag* type, AQULong* index, 
  AQMTAContainer* container);
 typedef AQDataStructure (*PrometheusAccessBlockGeneratorLambda)(PrometheusDeserializer deserializer, 
  AQChar* adder_type, AQDataStructure ds);
 typedef AQDataStructure (*PrometheusAccessValueGeneratorLambda)(PrometheusDeserializer deserializer, 
  AQDataStructure ds, PrometheusProcessValueLambda process_value, AQTypeFlag* type_array, AQULong type_count); 
 typedef AQDataStructure (*PrometheusGeneratorLambda)(PrometheusDeserializer deserializer, 
- AQChar* adder_type, PrometheusAccessBlockGeneratorLambda block_generator,
+ AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
  PrometheusAccessValueGeneratorLambda value_generator);
 typedef AQDataStructure (*PrometheusAdderLambda)(AQDataStructure ds, AQDataStructure ds_to_add, AQChar* label);
 
@@ -43,6 +43,12 @@ typedef AQDataStructure (*PrometheusAdderLambda)(AQDataStructure ds, AQDataStruc
  
 AQInt prometheus_serialize(DeimosFile file, PrometheusDataStructure ds);
 AQInt prometheus_serialize_with_label(DeimosFile file, AQString label, PrometheusDataStructure ds);
+
+PrometheusDeserializer prometheus_deserializer_new(DeimosFile file);
+void prometheus_deserializer_destroy(PrometheusDeserializer deserializer);
+AQInt prometheus_register_deserializer(PrometheusDeserializer deserializer, AQString name,
+ PrometheusGeneratorLambda generator, PrometheusAdderLambda adder);
+AQDataStructure prometheus_deserialize(PrometheusDeserializer deserializer);
 
 AQInt prometheus_output_file(DeimosFile file, AQDataStructure data);
 AQDataStructure prometheus_load_file(DeimosFile file);

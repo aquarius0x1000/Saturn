@@ -1789,7 +1789,7 @@ AQInt aqstore_add_item(AQStore store, AQAny item, const AQChar* label) {
     } else {
         return aqinternal_store_set_item(store, item, label);
     }
-    return 0;
+    return 1;
 }
 
 AQInt aqstore_remove_item(AQStore store, const AQChar* label) {
