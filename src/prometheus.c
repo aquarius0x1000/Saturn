@@ -557,7 +557,8 @@ static AQDataStructure prometheus_internal_value_adder(AQDataStructure ds,
 
 #define prometheus_macro_register_value(the_type,type_name)\
  result = prometheus_internal_register_deserializer(deserializer,type_name,\
-       prometheus_internal_value_generator_##the_type,prometheus_internal_value_adder);
+     prometheus_internal_value_generator_##the_type,prometheus_internal_value_adder);\
+ if (!result) return 0;     
 
 #define prometheus_macro_define_gen_values(the_type)\
  static AQInt prometheus_internal_process_values_##the_type(AQDataStructure ds, AQTypeFlag* type, AQULong* index,\ 
@@ -596,7 +597,8 @@ static AQDataStructure prometheus_internal_values_adder(AQDataStructure ds,
 
 #define prometheus_macro_register_values(the_type,type_name)\
  result = prometheus_internal_register_deserializer(deserializer,type_name,\
-       prometheus_internal_values_generator_##the_type,prometheus_internal_values_adder);
+     prometheus_internal_values_generator_##the_type,prometheus_internal_values_adder);\
+ if (!result) return 0; 
 
 static AQDataStructure prometheus_internal_mta_generator(PrometheusDeserializer deserializer, 
  AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
@@ -608,6 +610,7 @@ static AQDataStructure prometheus_internal_mta_generator(PrometheusDeserializer 
 
 static AQDataStructure prometheus_internal_mta_adder(AQDataStructure ds,
  AQDataStructure ds_to_add, AQChar* label) {
+    if (aqds_get_flag(ds_to_add) != AQMultiTypeArrayFlag) return NULL; 
     return ds_to_add;
 }
 
@@ -666,11 +669,14 @@ static AQInt prometheus_internal_register_aqdatastructures(PrometheusDeserialize
     prometheus_macro_register_values(AQDouble,"@Doubles");
     prometheus_macro_register_values(AQAny,"@Texts");
     result = prometheus_internal_register_deserializer(deserializer,"@Values",
-       prometheus_internal_mta_generator,prometheus_internal_mta_adder);
+     prometheus_internal_mta_generator,prometheus_internal_mta_adder);
+    if (!result) return 0; 
     result = prometheus_internal_register_deserializer(deserializer,"@Array",
-       prometheus_internal_array_generator,prometheus_internal_array_adder);
+     prometheus_internal_array_generator,prometheus_internal_array_adder);
+    if (!result) return 0;   
     result = prometheus_internal_register_deserializer(deserializer,"@Store",
-       prometheus_internal_store_generator,prometheus_internal_store_adder);  
+     prometheus_internal_store_generator,prometheus_internal_store_adder);
+    if (!result) return 0;   
     return result; 
 }
 

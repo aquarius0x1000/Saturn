@@ -5,12 +5,12 @@
 #endif
 
 #if !_WIN32
- #include <dlfcn.h>
+  #include <dlfcn.h>
 #endif
 
 struct DeimosFile_s { 
   AQDataStructureFlag flag;
-  AQDestroyerFuncType destroyer;
+  AQDestroyerLambda destroyer;
   AQAllocator allocator;
   DeimosFileModeFlag mode; 
   AQInt tab;
@@ -21,15 +21,15 @@ struct DeimosFile_s {
 };
 
 #ifdef _WIN32
- #define deimos_internal_macro_ftell(file) _ftelli64(file)
+  #define deimos_internal_macro_ftell(file) _ftelli64(file)
 #else
- #define deimos_internal_macro_ftell(file) ftell(file)
+  #define deimos_internal_macro_ftell(file) ftell(file)
 #endif
  
 #ifdef _WIN32
- #define deimos_internal_macro_fseek(file,pos,origin) _fseeki64(file,pos,origin)
+  #define deimos_internal_macro_fseek(file,pos,origin) _fseeki64(file,pos,origin)
 #else
- #define deimos_internal_macro_fseek(file,pos,origin) fseek(file,pos,origin)
+  #define deimos_internal_macro_fseek(file,pos,origin) fseek(file,pos,origin)
 #endif 
 
 static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
@@ -52,7 +52,7 @@ static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
             args);
     if (result > 0) file->index += result;     
     }
-end:        
+   end:        
     va_end(args);
     return result; 
 }
@@ -115,7 +115,7 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
      DeimosFileModeFlag mode, AQAllocator allocator) {
     DeimosFile file = aq_new(struct DeimosFile_s,allocator);
     file->flag = AQDestroyableFlag;
-    file->destroyer = (AQDestroyerFuncType)deimos_close_file;
+    file->destroyer = (AQDestroyerLambda)deimos_close_file;
     file->allocator = allocator;
     if ( mode == DeimosReadModeFlag ) file->file_struct = fopen(filepath, "r");
     if ( mode == DeimosWriteModeFlag ) file->file_struct = fopen(filepath, "w");
@@ -128,9 +128,9 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
 }
 
 DeimosFile deimos_get_file_from_string(AQString string, DeimosFileModeFlag mode) {
-     DeimosFile file = aq_new(struct DeimosFile_s,aqstring_get_allocator(string));
+    DeimosFile file = aq_new(struct DeimosFile_s,aqstring_get_allocator(string));
     file->flag = AQDestroyableFlag;
-    file->destroyer = (AQDestroyerFuncType)deimos_close_file;
+    file->destroyer = (AQDestroyerLambda)deimos_close_file;
     file->allocator = aqstring_get_allocator(string);
     file->file_buffer = string;
     file->file_struct = NULL;
@@ -213,12 +213,12 @@ AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end) {
         if (!has_started) continue;
         if (character == end) break;
         goto add_character;
-    validate:
+       validate:
         if (character == start) has_started++;
         if (character == start && has_started == 1) continue;
         if (!has_started) continue;
         if (has_started > 1) break;
-    add_character:    
+       add_character:    
         num_of_characters++;
         if (string == NULL) string = aq_make_c_array(num_of_characters, AQInt);
         if (string != NULL) string = aq_realloc(string, num_of_characters,
@@ -380,9 +380,9 @@ AQInt deimos_output_long(DeimosFile file, AQLong value) {
 
 AQInt deimos_output_ulong(DeimosFile file, AQULong value) {
     #ifdef _WIN32
-     return deimos_internal_fprintf(file,"%llu",value);
+      return deimos_internal_fprintf(file,"%llu",value);
     #else
-     return deimos_internal_fprintf(file,"%lu",value);
+      return deimos_internal_fprintf(file,"%lu",value);
     #endif
 }
 
@@ -572,7 +572,7 @@ AQInt deimos_get_utf32_character(DeimosFile file) {
     AQUInt byte3 = 0;
     AQUInt value = 0;
     AQSByte basebyte = 0;
-loop:
+   loop:
     byte = deimos_internal_fgetc(file);
     if ( byte == EOF ) return EOF;
     basebyte = byte;
@@ -629,26 +629,26 @@ loop:
 }
 
 AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset) {
-   AQULong file_position = deimos_get_file_position(file);
-skip: 
-   AQInt character = deimos_get_utf32_character(file);
-   if (character == EOF) return EOF;
-   if (isspace(character)) goto skip;
-   *offset = deimos_get_file_position(file) - file_position;
-   deimos_set_file_position(file,file_position);
-   return character;
+    AQULong file_position = deimos_get_file_position(file);
+   skip: 
+    AQInt character = deimos_get_utf32_character(file);
+    if (character == EOF) return EOF;
+    if (isspace(character)) goto skip;
+    *offset = deimos_get_file_position(file) - file_position;
+    deimos_set_file_position(file,file_position);
+    return character;
 }
 
 AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset) {
-   AQULong file_position = deimos_get_file_position(file);   
-   AQULong last = file_position - (1+offset);
-   deimos_set_file_position(file,last);
-skip:   
-   AQInt character = deimos_get_utf32_character(file);
-   if (character == EOF) return EOF;
-   if (isspace(character)) goto skip;
-   deimos_set_file_position(file,file_position);
-   return character;
+    AQULong file_position = deimos_get_file_position(file);   
+    AQULong last = file_position - (1+offset);
+    deimos_set_file_position(file,last);
+   skip:   
+    AQInt character = deimos_get_utf32_character(file);
+    if (character == EOF) return EOF;
+    if (isspace(character)) goto skip;
+    deimos_set_file_position(file,file_position);
+    return character;
 }
 
 AQInt deimos_output_utf32_character(DeimosFile file, AQInt character) {
@@ -660,15 +660,15 @@ AQInt deimos_output_utf32_character(DeimosFile file, AQInt character) {
     free(c_string);
 }
  
- #ifdef _WIN32
+#ifdef _WIN32
   #define deimos_internal_macro_dlopen(file) LoadLibrary(file)
   #define deimos_internal_macro_dlclose(library) FreeLibrary((HMODULE)library)
   #define deimos_internal_macro_dlsym(library, name) GetProcAddress((HMODULE)library,name)
- #else
+#else
   #define deimos_internal_macro_dlopen(file) dlopen(file, RTLD_LAZY | RTLD_LOCAL)
   #define deimos_internal_macro_dlclose(library) dlclose(library)
   #define deimos_internal_macro_dlsym(library, name) dlsym(library, name)
- #endif
+#endif
 
 AQAny deimos_load_library_file(const AQChar* filepath) {
     return deimos_internal_macro_dlopen(filepath);
@@ -679,5 +679,5 @@ AQInt deimos_free_library(AQAny library) {
 }
 
 AQAny deimos_get_function(AQAny library, const AQChar* name) {
-     return deimos_internal_macro_dlsym(library, name);
+    return deimos_internal_macro_dlsym(library, name);
 }

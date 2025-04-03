@@ -14,17 +14,17 @@
 #include <inttypes.h>
 
 #ifdef __GNUC__
- #pragma GCC diagnostic ignored "-Wunused-value"
- #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
- #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+  #pragma GCC diagnostic ignored "-Wunused-value"
+  #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+  #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 #endif
 #ifdef __clang__
- #pragma clang diagnostic ignored "-Wunused-value"
- #pragma clang diagnostic ignored "-Wunused-but-set-variable"
+  #pragma clang diagnostic ignored "-Wunused-value"
+  #pragma clang diagnostic ignored "-Wunused-but-set-variable"
 #endif
 
 #ifndef M_PI
- #define M_PI 3.1415926535897932384626433832
+  #define M_PI 3.1415926535897932384626433832
 #endif
 
 typedef float AQFloat;
@@ -133,7 +133,7 @@ typedef enum {
  
 #define AQ_DATA_STRUCTURE_BASE_CLASS\
  AQDataStructureFlag flag;\
- AQDestroyerFuncType destroyer; 
+ AQDestroyerLambda destroyer; 
  
 typedef struct AQDataStructure_s* AQDataStructure;
 typedef struct AQArray_s* AQArray;
@@ -165,18 +165,18 @@ typedef struct {
     }; 
 } AQMTAContainer;
 
-typedef void (*AQIteratorFuncType)(AQAny data);
-typedef void (*AQDestroyerFuncType)(AQDataStructure ds);
-typedef void (*AQByteIteratorFuncType)(AQByte character);
-typedef void (*AQCharacterIteratorFuncType)(AQUInt character);
-typedef AQAny (*AQGetDataFromArrayFuncType)(AQAny array, AQULong index);
-typedef AQAny (*AQAllocatorFuncType)(AQAny allocation_data, AQULong size_in_bytes);
-typedef void (*AQAllocatorFreeFuncType)(AQAny allocation_data, AQAny data_to_be_freed);
+typedef void (*AQIteratorLambda)(AQAny data);
+typedef void (*AQDestroyerLambda)(AQDataStructure ds);
+typedef void (*AQByteIteratorLambda)(AQByte character);
+typedef void (*AQCharacterIteratorLambda)(AQUInt character);
+typedef AQAny (*AQGetDataFromArrayLambda)(AQAny array, AQULong index);
+typedef AQAny (*AQAllocatorLambda)(AQAny allocation_data, AQULong size_in_bytes);
+typedef void (*AQAllocatorFreeLambda)(AQAny allocation_data, AQAny data_to_be_freed);
 
 typedef struct {
   AQAny data;
-  AQAllocatorFuncType allocator_function;
-  AQAllocatorFreeFuncType free_function;
+  AQAllocatorLambda allocator_function;
+  AQAllocatorFreeLambda free_function;
 } AQAllocatorStruct;
 
 typedef AQAllocatorStruct* AQAllocator;
@@ -266,7 +266,7 @@ void aqarray_remove_space(AQArray array, AQULong space_to_remove);
 AQAny aqarray_get_item(AQArray array, AQULong index);
 AQInt aqarray_set_item(AQArray array, AQULong index, AQAny item);
 AQULong aqarray_get_num_of_items(AQArray array);
-void aqarray_iterate_with(AQIteratorFuncType iterator, AQArray array);
+void aqarray_iterate_with(AQIteratorLambda iterator, AQArray array);
  
  
 #define aq_new_string(string,...) _Generic((string __VA_OPT__(,) __VA_ARGS__), \
@@ -318,8 +318,8 @@ AQUInt* aqstring_get_utf32_string(AQString string, AQULong* length);
 AQString aqstring_get_string_for_ascii(AQString string);
 AQString aqstring_swap_escape_sequences_with_characters(AQString string);
 AQString aqstring_expand(AQString string, AQULong expand_amount);
-void aqstring_iterate_bytes_with(AQByteIteratorFuncType iterator, AQString string);
-void aqstring_iterate_characters_with(AQCharacterIteratorFuncType iterator, AQString string);
+void aqstring_iterate_bytes_with(AQByteIteratorLambda iterator, AQString string);
+void aqstring_iterate_characters_with(AQCharacterIteratorLambda iterator, AQString string);
 
 
 #define aq_new_list(...)\
@@ -334,9 +334,9 @@ void aqstring_iterate_characters_with(AQCharacterIteratorFuncType iterator, AQSt
 AQList aqlist_new(void);
 AQList aqlist_new_with_allocator(AQAllocator allocator);
 AQList aqlist_new_from_array(AQAny array,
-   AQGetDataFromArrayFuncType GetDataFromArrayFunc, AQULong size);
+   AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size);
 AQList aqlist_new_from_array_with_allocator(AQAny array,
- AQGetDataFromArrayFuncType GetDataFromArrayFunc,
+ AQGetDataFromArrayLambda GetDataFromArrayLambda,
   AQULong size, AQAllocator allocator);
 AQListNode aqlist_new_node(AQList list, AQListNode before,
    AQListNode after, AQAny item);
@@ -353,7 +353,7 @@ void aqlist_insert_a_to_b(AQList list, AQListNode node_a, AQListNode node_b);
 AQListNode aqlist_move_node(AQListNode node, AQList list_a, AQList list_b);
 void aqlist_copy(AQList list_a, AQList list_b);
 void aqlist_copy_from_array(AQList list, AQAny array,
-  AQGetDataFromArrayFuncType GetDataFromArrayFunc, AQULong size);
+  AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size);
 void aqlist_set_item(AQListNode node, AQAny item);
 AQAny aqlist_get_item(AQListNode node);
 AQListNode aqlist_next_node(AQListNode node);
@@ -365,7 +365,7 @@ AQListNode aqlist_get_node(AQList list, AQULong index);
 AQULong aqlist_get_index(AQList list, AQListNode node);
 AQListNode aqlist_next_node_after_n(AQListNode node, AQULong n);
 AQListNode aqlist_previous_node_after_n(AQListNode node, AQULong n);
-void aqlist_iterate_with(AQIteratorFuncType iterator, AQList list);
+void aqlist_iterate_with(AQIteratorLambda iterator, AQList list);
 
 
 #define aq_new_stack(...)\
@@ -547,7 +547,7 @@ aq_mta_declare_set(AQAny);
 AQULong aqmta_get_num_of_items(AQMultiTypeArray mta, AQTypeFlag type_flag);
 AQULong aqmta_get_num_of_items_all_types(AQMultiTypeArray mta);
 AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index);
-void aqmta_iterate_all_types_with(AQIteratorFuncType iterator, AQMultiTypeArray mta);
+void aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mta);
 
 
 #define aq_new_mtastackbuffer(...)\
@@ -672,7 +672,7 @@ AQInt aqstore_is_store_empty(AQStore store);
 AQInt aqstore_add_item_to_list(AQStore store, AQAny item);
 AQList aqstore_get_list(AQStore store);
 AQString aqstore_label_from_list_node(AQListNode node);
-void aqstore_iterate_store_with(AQIteratorFuncType iterator, AQStore store);
+void aqstore_iterate_store_with(AQIteratorLambda iterator, AQStore store);
 
 
 #define aq_any(any) aqany_new(&any,sizeof(any))

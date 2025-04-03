@@ -6,13 +6,13 @@
 typedef struct DeimosFile_s* DeimosFile;
 
 typedef enum { 
- DeimosReadModeFlag, 
- DeimosWriteModeFlag,
+  DeimosReadModeFlag, 
+  DeimosWriteModeFlag
 } DeimosFileModeFlag;
 
 typedef enum { 
- DeimosFileBackedFlag, 
- DeimosStringBackedFlag 
+  DeimosFileBackedFlag, 
+  DeimosStringBackedFlag 
 } DeimosBackingFlag;
 
 #define deimos_open_file(...) _Generic((__VA_ARGS__), \
@@ -21,11 +21,11 @@ typedef enum {
 )(__VA_ARGS__)
 
 DeimosFile deimos_open_file_without_allocator(const AQChar* filepath,
-  DeimosFileModeFlag mode);
+ DeimosFileModeFlag mode);
 DeimosFile deimos_open_file_with_allocator(const AQChar* filepath, 
-  DeimosFileModeFlag mode, AQAllocator allocator);
+ DeimosFileModeFlag mode, AQAllocator allocator);
 DeimosFile deimos_get_file_from_string(AQString string,
-  DeimosFileModeFlag mode);     
+ DeimosFileModeFlag mode);     
 void deimos_close_file(DeimosFile file);
 
 AQAllocator deimos_get_allocator(DeimosFile file);

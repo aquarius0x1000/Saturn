@@ -206,7 +206,7 @@ AQArray aqarray_new(void) {
 AQArray aqarray_new_with_allocator(AQAllocator allocator) {
     AQArray array = aq_new(struct AQArray_s,allocator);
     array->flag = AQArrayFlag;
-    array->destroyer = (AQDestroyerFuncType)aqarray_destroy;
+    array->destroyer = (AQDestroyerLambda)aqarray_destroy;
     array->allocator = allocator;
     array->num_of_items = 0;
     array->items = NULL;
@@ -220,7 +220,7 @@ AQArray aqarray_new_with_base_size(AQULong base_size) {
 AQArray aqarray_new_with_base_size_with_allocator(AQULong base_size, AQAllocator allocator) {
     AQArray array = aq_new(struct AQArray_s, allocator);
     array->flag = AQArrayFlag;
-    array->destroyer = (AQDestroyerFuncType)aqarray_destroy;
+    array->destroyer = (AQDestroyerLambda)aqarray_destroy;
     array->allocator = allocator;
     array->items = aq_make_c_array(base_size, AQAny, allocator);
     array->num_of_items = base_size;
@@ -321,7 +321,7 @@ AQULong aqarray_get_num_of_items(AQArray array) {
   return array->num_of_items;
 }
 
-void aqarray_iterate_with(AQIteratorFuncType iterator, AQArray array) {
+void aqarray_iterate_with(AQIteratorLambda iterator, AQArray array) {
     int i = 0;
     while ( i < array->num_of_items ) {
         iterator(array->items[i]);
@@ -336,7 +336,7 @@ AQString aqstring_new(AQULong size_in_bytes) {
 AQString aqstring_new_with_allocator(AQULong size_in_bytes, AQAllocator allocator) {
     AQString string = aq_new(struct AQString_s,allocator);
     string->flag = AQStringFlag;
-    string->destroyer = (AQDestroyerFuncType)aqstring_destroy;
+    string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = size_in_bytes;
     string->data = aq_make_c_array(string->size_in_bytes, AQChar, allocator);
     string->data[string->size_in_bytes-1] = '\0';
@@ -447,7 +447,7 @@ AQString aqstring_new_from_buffer_with_allocator(const AQChar* text,
   AQULong size_in_bytes, AQAllocator allocator) {
     AQString string = aq_new(struct AQString_s, allocator);
     string->flag = AQStringFlag;
-    string->destroyer = (AQDestroyerFuncType)aqstring_destroy;
+    string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = size_in_bytes;
     string->data = aq_make_c_array(string->size_in_bytes, AQChar, allocator);
     string->data[string->size_in_bytes-1] = '\0';
@@ -469,7 +469,7 @@ AQString aqstring_new_from_c_string(const AQChar* text) {
 AQString aqstring_new_from_c_string_with_allocator(const AQChar* text, AQAllocator allocator) {
     AQString string = aq_new(struct AQString_s, allocator);
     string->flag = AQStringFlag;
-    string->destroyer = (AQDestroyerFuncType)aqstring_destroy;
+    string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = strlen(text);
     string->data =
      aq_make_c_array(string->size_in_bytes+1, AQChar, allocator);
@@ -487,7 +487,7 @@ AQString aqstring_new_from_two_strings_with_allocator(AQString a,
   AQString b, AQAllocator allocator) {
     AQString string = aq_new(struct AQString_s, allocator);
     string->flag = AQStringFlag;
-    string->destroyer = (AQDestroyerFuncType)aqstring_destroy;
+    string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = a->size_in_bytes + b->size_in_bytes;
     string->data = aq_make_c_array(string->size_in_bytes+1, AQChar, allocator);
     AQInt i = 0;
@@ -843,7 +843,7 @@ AQString aqstring_swap_escape_sequences_with_characters(AQString string) {
 AQString aqstring_expand(AQString string, AQULong expand_amount) {
     AQULong new_size = expand_amount + aqstring_get_size_in_bytes(string);
     string->data = aq_realloc(string->data,new_size,
-        aqstring_get_size_in_bytes(string),AQChar,1,string->allocator);
+     aqstring_get_size_in_bytes(string),AQChar,1,string->allocator);
     string->size_in_characters = -1;
     string->size_in_bytes = new_size-1;
     string->data[new_size-1] = '\0';
@@ -851,7 +851,7 @@ AQString aqstring_expand(AQString string, AQULong expand_amount) {
     return string; 
 }
 
-void aqstring_iterate_bytes_with(AQByteIteratorFuncType iterator, AQString string) {
+void aqstring_iterate_bytes_with(AQByteIteratorLambda iterator, AQString string) {
     AQULong i = 0;
     while ( i < string->size_in_bytes ) {
         iterator(string->data[i]);
@@ -859,7 +859,7 @@ void aqstring_iterate_bytes_with(AQByteIteratorFuncType iterator, AQString strin
   }
 } 
  
-void aqstring_iterate_characters_with(AQCharacterIteratorFuncType iterator, AQString string) {
+void aqstring_iterate_characters_with(AQCharacterIteratorLambda iterator, AQString string) {
     AQULong i = 0;
     AQSByte offset = 0;
     aqstring_get_length(string);
@@ -877,7 +877,7 @@ AQList aqlist_new(void) {
 AQList aqlist_new_with_allocator(AQAllocator allocator) {
     AQList list = aq_new(struct AQList_s,allocator);
     list->flag = AQListFlag;
-    list->destroyer = (AQDestroyerFuncType)aqlist_destroy;
+    list->destroyer = (AQDestroyerLambda)aqlist_destroy;
     list->num_of_nodes = 0;
     list->first = NULL;
     list->last = NULL;
@@ -886,22 +886,22 @@ AQList aqlist_new_with_allocator(AQAllocator allocator) {
 }
 
 AQList aqlist_new_from_array(AQAny array,
-  AQGetDataFromArrayFuncType GetDataFromArrayFunc, AQULong size) {
-    return aqlist_new_from_array_with_allocator(array,GetDataFromArrayFunc,size,aqmem_default_allocator());
+  AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size) {
+    return aqlist_new_from_array_with_allocator(array,GetDataFromArrayLambda,size,aqmem_default_allocator());
 }
 
 AQList aqlist_new_from_array_with_allocator(AQAny array,
-  AQGetDataFromArrayFuncType GetDataFromArrayFunc,
+  AQGetDataFromArrayLambda GetDataFromArrayLambda,
   AQULong size, AQAllocator allocator) {
     AQList list = aq_new_list(allocator);
-    aqlist_copy_from_array(list, array, GetDataFromArrayFunc, size);
+    aqlist_copy_from_array(list, array, GetDataFromArrayLambda, size);
     return list;
 }
 
 AQListNode aqlist_new_node(AQList list, AQListNode before, AQListNode after, AQAny item) {
     AQListNode node = aq_new(struct AQListNode_s,list->allocator);
     node->flag = AQListNodeFlag;
-    node->destroyer = (AQDestroyerFuncType)aqlist_destroy_node;
+    node->destroyer = (AQDestroyerLambda)aqlist_destroy_node;
     node->before = before;
     node->after = after;
     node->data = item;
@@ -1034,11 +1034,11 @@ void aqlist_copy(AQList list_a, AQList list_b) {
 }
 
 void aqlist_copy_from_array(AQList list, AQAny array,
-  AQGetDataFromArrayFuncType GetDataFromArrayFunc, AQULong size) {
+ AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size) {
     AQAny data = NULL;
     int i = 0;
     while ( i < size ) {
-        data = GetDataFromArrayFunc(array,i);
+        data = GetDataFromArrayLambda(array,i);
         aqlist_add_item(list, data);
         i++;
     }
@@ -1130,7 +1130,7 @@ AQListNode aqlist_previous_node_after_n(AQListNode node, AQULong n) {
     return node;
 }
 
-void aqlist_iterate_with(AQIteratorFuncType iterator, AQList list) {
+void aqlist_iterate_with(AQIteratorLambda iterator, AQList list) {
     AQListNode node = list->first;
     AQAny item = NULL;
     while ( node != NULL ) {
@@ -1147,7 +1147,7 @@ AQStack aqstack_new(void) {
 AQStack aqstack_new_with_allocator(AQAllocator allocator) {
     AQStack stack = aq_new(struct AQStack_s,allocator);
     stack->flag = AQStackFlag;
-    stack->destroyer = (AQDestroyerFuncType)aqstack_destroy;
+    stack->destroyer = (AQDestroyerLambda)aqstack_destroy;
     stack->list = aq_new_list(allocator);
     return stack;
 }
@@ -1194,7 +1194,7 @@ AQStackBuffer aqstackbuffer_new(void) {
 AQStackBuffer aqstackbuffer_new_with_allocator(AQAllocator allocator) {
     AQStackBuffer stack = aq_new(struct AQStackBuffer_s,allocator);
     stack->flag = AQStackBufferFlag;
-    stack->destroyer = (AQDestroyerFuncType)aqstackbuffer_destroy;
+    stack->destroyer = (AQDestroyerLambda)aqstackbuffer_destroy;
     stack->rate = 50;
     stack->index = 0;
     stack->count = 0;
@@ -1254,7 +1254,7 @@ AQMultiTypeArray aqmta_new(void) {
 AQMultiTypeArray aqmta_new_with_allocator(AQAllocator allocator) {
     AQMultiTypeArray mta = aq_new(struct AQMultiTypeArray_s,allocator);
     mta->flag = AQMultiTypeArrayFlag;
-    mta->destroyer = (AQDestroyerFuncType)aqmta_destroy;
+    mta->destroyer = (AQDestroyerLambda)aqmta_destroy;
     mta->allocator = allocator;
     int i = 0; 
     while (i < 11) {
@@ -1471,7 +1471,7 @@ AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index) {
     return container;
 }   
  
-void aqmta_iterate_all_types_with(AQIteratorFuncType iterator, AQMultiTypeArray mta) {
+void aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mta) {
     int i = 0;
     int j = 0;
     AQMTAContainer container;
@@ -1494,7 +1494,7 @@ AQMTAStackBuffer aqmtastackbuffer_new(void) {
 AQMTAStackBuffer aqmtastackbuffer_new_with_allocator(AQAllocator allocator) {
     AQMTAStackBuffer stack = aq_new(struct AQMTAStackBuffer_s,allocator);
     stack->flag = AQMTAStackBufferFlag;
-    stack->destroyer = (AQDestroyerFuncType)aqmtastackbuffer_destroy;
+    stack->destroyer = (AQDestroyerLambda)aqmtastackbuffer_destroy;
     stack->data_buffer = aq_new_mta(allocator);
     stack->type_buffer = NULL;
     stack->type_buffer_size = 0;
@@ -1652,7 +1652,7 @@ AQStore aqstore_new(void) {
 AQStore aqstore_new_with_allocator(AQAllocator allocator) {
     AQStore store = aq_new(struct AQStore_s,allocator);
     store->flag = AQStoreFlag;
-    store->destroyer = (AQDestroyerFuncType)aqstore_destroy;
+    store->destroyer = (AQDestroyerLambda)aqstore_destroy;
     store->dictionary = NULL;
     store->items = NULL;
     store->allocator = allocator;
@@ -1842,7 +1842,7 @@ AQString aqstore_label_from_list_node(AQListNode node) {
     return aqinternal_list_get_string(node);
 }
 
-void aqstore_iterate_store_with(AQIteratorFuncType iterator, AQStore store) {
+void aqstore_iterate_store_with(AQIteratorLambda iterator, AQStore store) {
     if (store->items != NULL) aqlist_iterate_with(iterator, store->items);
 }
 
