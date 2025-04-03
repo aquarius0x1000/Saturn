@@ -12,9 +12,9 @@ Saturn as of now consists of :
 
 - deimos - Very basic file I/O, supports string backed files, and a binary-to-text encoding, base32*.
 
-Work in progress:
+- prometheus - Serialization and deserialization library.
 
-- prometheus - Serialization and  deserialization library. 
+
 
 Planned for the future:
 
