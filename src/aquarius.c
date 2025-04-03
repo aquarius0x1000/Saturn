@@ -1,7 +1,7 @@
 #include "aquarius.h"
 
 struct AQDataStructure_s {
- AQ_DATA_STRUCTURE_BASE_CLASS
+  AQ_DATA_STRUCTURE_BASE_CLASS
 };
 
 struct AQArray_s {
@@ -19,20 +19,20 @@ struct AQString_s {
   AQChar* data;
  };
 
- struct AQListNode_s {
-   AQ_DATA_STRUCTURE_BASE_CLASS   
-   struct AQListNode_s* before;
-   struct AQListNode_s* after;
-   AQAny data;
-   AQString string;
+struct AQListNode_s {
+  AQ_DATA_STRUCTURE_BASE_CLASS   
+  struct AQListNode_s* before;
+  struct AQListNode_s* after;
+  AQAny data;
+  AQString string;
  };
 
- struct AQList_s {
-   AQ_DATA_STRUCTURE_BASE_CLASS
-   AQAllocator allocator;
-   AQULong num_of_nodes;
-   AQListNode first;
-   AQListNode last;
+struct AQList_s {
+  AQ_DATA_STRUCTURE_BASE_CLASS
+  AQAllocator allocator;
+  AQULong num_of_nodes;
+  AQListNode first;
+  AQListNode last;
 };
 
 struct AQStack_s {
