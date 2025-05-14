@@ -3,29 +3,33 @@
 
 #include "deimos.h"
 
-#define PROMETHEUS_BLOCK_NOT_DONE 0
-#define PROMETHEUS_BLOCK_DONE 1
+typedef enum {
+  PrometheusBlockNotDone = 0,
+  PrometheusBlockDone = 1
+} PrometheusBlockStatus;
 
-#define PROMETHEUS_LIST_NOT_DONE 1
-#define PROMETHEUS_LIST_DONE 0
+typedef enum {
+  PrometheusListNotDone = 1,
+  PrometheusListDone = 0
+} PrometheusListStatus;
 
 typedef struct PrometheusDeserializer_s* PrometheusDeserializer;
 typedef struct PrometheusDataStructure_s* PrometheusDataStructure;
-
-typedef AQInt (*PrometheusGetValueLambda)(AQDataStructure ds, AQULong* index,
+typedef PrometheusListStatus (*PrometheusGetValueLambda)(AQDataStructure ds, AQULong* index,
  AQMTAContainer* container);
-typedef AQInt (*PrometheusOutputBlockLambda)(DeimosFile file, AQDataStructure ds);
-typedef AQInt (*PrometheusPrintListLambda)(DeimosFile file, AQDataStructure ds, 
-  PrometheusGetValueLambda get_value);
-typedef AQInt (*PrometheusPrintBlockLambda)(DeimosFile file, AQDataStructure ds, 
+typedef PrometheusBlockStatus (*PrometheusOutputBlockLambda)(DeimosFile file,
+ AQDataStructure ds);
+typedef AQStatus (*PrometheusPrintListLambda)(DeimosFile file, AQDataStructure ds, 
+ PrometheusGetValueLambda get_value);
+typedef AQStatus (*PrometheusPrintBlockLambda)(DeimosFile file, AQDataStructure ds, 
  PrometheusOutputBlockLambda output_block);  
-typedef AQInt (*PrometheusOutputContainerLambda)(DeimosFile file, AQDataStructure ds, 
+typedef AQStatus (*PrometheusOutputContainerLambda)(DeimosFile file, AQDataStructure ds, 
  PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block);
-typedef AQInt (*PrometheusAccessOutputContainerLambda)(DeimosFile file, AQChar* label, 
- AQString type, AQDataStructure ds, PrometheusOutputContainerLambda output_container);    
-typedef AQInt (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDataStructure ds,
+typedef AQStatus (*PrometheusAccessOutputContainerLambda)(DeimosFile file, AQChar* label, 
+ AQString type, AQDataStructure ds, PrometheusOutputContainerLambda output_container);  
+typedef AQStatus (*PrometheusSerializerLambda)(DeimosFile file, AQChar* label, AQDataStructure ds,
  PrometheusAccessOutputContainerLambda output_container);
-typedef AQInt (*PrometheusProcessValueLambda)(AQDataStructure ds, AQTypeFlag* type, AQULong* index, 
+typedef AQStatus (*PrometheusProcessValueLambda)(AQDataStructure ds, AQTypeFlag* type, AQULong* index, 
  AQMTAContainer* container);
 typedef AQDataStructure (*PrometheusAccessBlockGeneratorLambda)(PrometheusDeserializer deserializer, 
  AQChar* adder_type, AQDataStructure ds);
@@ -41,12 +45,12 @@ typedef AQDataStructure (*PrometheusAdderLambda)(AQDataStructure ds, AQDataStruc
  PrometheusSerializerLambda serialize;
  
  
-AQInt prometheus_serialize(DeimosFile file, PrometheusDataStructure ds);
-AQInt prometheus_serialize_with_label(DeimosFile file, AQString label, PrometheusDataStructure ds);
+AQStatus prometheus_serialize(DeimosFile file, PrometheusDataStructure ds);
+AQStatus prometheus_serialize_with_label(DeimosFile file, AQString label, PrometheusDataStructure ds);
 
 PrometheusDeserializer prometheus_deserializer_new(DeimosFile file);
 void prometheus_deserializer_destroy(PrometheusDeserializer deserializer);
-AQInt prometheus_register_deserializer(PrometheusDeserializer deserializer, AQString name,
+AQStatus prometheus_register_deserializer(PrometheusDeserializer deserializer, AQString name,
  PrometheusGeneratorLambda generator, PrometheusAdderLambda adder);
 AQDataStructure prometheus_deserialize(PrometheusDeserializer deserializer);
 

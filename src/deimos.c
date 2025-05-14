@@ -102,7 +102,7 @@ static AQInt deimos_internal_fputc(AQInt byte, DeimosFile file) {
         if ( file->index < 0 ) return EOF;
         aqstring_set_byte(file->file_buffer,file->index,(AQByte)byte);
         file->index++;
-        return 0;
+        return byte;
     }
     return EOF;
 }
@@ -173,26 +173,26 @@ AQULong deimos_get_file_position(DeimosFile file) {
     return deimos_internal_ftell(file);
 }
 
-AQInt deimos_set_file_position(DeimosFile file, AQULong position) {
-    return deimos_internal_fseek(file,position,SEEK_SET);
+DeimosStatus deimos_set_file_position(DeimosFile file, AQULong position) {
+    return (deimos_internal_fseek(file,position,SEEK_SET) != 0) ? DeimosFailure : DeimosSuccess;
 }
 
-AQInt deimos_advance_file_position(DeimosFile file, AQULong offset) {
-    return deimos_set_file_position(file,
-        deimos_get_file_position(file)+offset);
+DeimosStatus deimos_advance_file_position(DeimosFile file, AQULong offset) {
+    return (deimos_set_file_position(file,
+     deimos_get_file_position(file)+offset) != 0) ? DeimosFailure : DeimosSuccess;
 }
 
-AQInt deimos_retreat_file_position(DeimosFile file, AQULong offset) {
-    return deimos_set_file_position(file,
-        deimos_get_file_position(file)-offset);
+DeimosStatus deimos_retreat_file_position(DeimosFile file, AQULong offset) {
+    return (deimos_set_file_position(file,
+     deimos_get_file_position(file)-offset) != 0) ? DeimosFailure : DeimosSuccess;
 }
 
-AQInt deimos_copy_file_to_file(DeimosFile file_to_copy, DeimosFile file_with_copied_data) {
+DeimosStatus deimos_copy_file_to_file(DeimosFile file_to_copy, DeimosFile file_with_copied_data) {
     AQInt character = 0;
     while ((character = deimos_internal_fgetc(file_to_copy)) != EOF) {
-        if (deimos_output_character(file_with_copied_data,character) == EOF) return EOF; 
+        if (deimos_output_character(file_with_copied_data,character) == DeimosFailure) return DeimosFailure; 
     }
-    return 0;
+    return DeimosSuccess;
 }
 
 AQInt deimos_get_character(DeimosFile file) {
@@ -206,7 +206,7 @@ AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end) {
     AQInt* string = NULL;
     AQULong num_of_characters = 0;
     if (start == end) mode++;
-    while ((character = deimos_get_utf32_character(file)) != EOF) {
+    while ((character = deimos_get_utf32_character(file)) != DeimosFailure) {
         if (mode) goto validate;
         if (character == start) has_started++;
         if (character == start) continue;
@@ -236,7 +236,7 @@ static AQString deimos_internal_get_number(DeimosFile file) {
     AQInt found_numbers = 0;
     AQInt* string = NULL;
     AQULong num_of_characters = 0;
-    while ((character = deimos_get_utf32_character(file)) != EOF) {
+    while ((character = deimos_get_utf32_character(file)) != DeimosFailure) {
         if (isdigit(character)) found_numbers++;
         if (!found_numbers) continue;
         if (!isdigit(character) && character != '.') break;
@@ -253,27 +253,27 @@ static AQString deimos_internal_get_number(DeimosFile file) {
 }
 
 static AQLong deimos_internal_get_signed(DeimosFile file) {
-    if ( file->mode != DeimosReadModeFlag ) return EOF;
+    if ( file->mode != DeimosReadModeFlag ) return DeimosFailure;
     AQString string = deimos_internal_get_number(file);
-    if (string == NULL) return EOF;
+    if (string == NULL) return DeimosFailure;
     AQLong value = strtoimax(aqstring_get_c_string(string),NULL,10);
     aqstring_destroy(string);
     return value;
 }
 
 static AQULong deimos_internal_get_unsigned(DeimosFile file) {
-    if ( file->mode != DeimosReadModeFlag ) return EOF;
+    if ( file->mode != DeimosReadModeFlag ) return DeimosFailure;
     AQString string = deimos_internal_get_number(file);
-    if (string == NULL) return EOF;
+    if (string == NULL) return DeimosFailure;
     AQULong value = strtoumax(aqstring_get_c_string(string),NULL,10);
     aqstring_destroy(string);
     return value;
 }
 
 static AQDouble deimos_internal_get_floating_point(DeimosFile file) {
-    if ( file->mode != DeimosReadModeFlag ) return EOF;
+    if ( file->mode != DeimosReadModeFlag ) return DeimosFailure;
     AQString string = deimos_internal_get_number(file);
-    if (string == NULL) return EOF;
+    if (string == NULL) return DeimosFailure;
     AQDouble value = strtod(aqstring_get_c_string(string),NULL);
     aqstring_destroy(string);
     return value;
@@ -327,79 +327,92 @@ AQInt deimos_output_sub_from_tab(DeimosFile file, AQInt value) {
     return file->tab -= value;
 }
 
-AQInt deimos_output_tab(DeimosFile file) {
+DeimosStatus deimos_output_tab(DeimosFile file) {
     AQInt i = file->tab;
     AQInt result;
     while (i > 0) {
         result = deimos_internal_fputc('\t',file);
-        if (result == EOF) return EOF;
+        if (result == EOF) return DeimosFailure;
         i--;
     } 
-  return 0;
+  return DeimosSuccess;
 }
 
-AQInt deimos_output_character(DeimosFile file, AQInt value) {
-    return deimos_internal_fputc(value,file);
+DeimosStatus deimos_output_character(DeimosFile file, AQInt value) {
+    if (deimos_internal_fputc(value,file) == EOF) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_string(DeimosFile file, AQChar* value) {
-    return deimos_internal_fprintf(file,"%s",value);
+DeimosStatus deimos_output_string(DeimosFile file, AQChar* value) {
+    if (deimos_internal_fprintf(file,"%s",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_byte(DeimosFile file, AQByte value) {
-    return deimos_internal_fprintf(file,"%hhu",value);
+DeimosStatus deimos_output_byte(DeimosFile file, AQByte value) {
+    if (deimos_internal_fprintf(file,"%hhu",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_sbyte(DeimosFile file, AQSByte value) {
-    return deimos_internal_fprintf(file,"%hhd",value);
+DeimosStatus deimos_output_sbyte(DeimosFile file, AQSByte value) {
+    if (deimos_internal_fprintf(file,"%hhd",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_short(DeimosFile file, AQShort value) {
-    return deimos_internal_fprintf(file,"%hd",value);
+DeimosStatus deimos_output_short(DeimosFile file, AQShort value) {
+    if (deimos_internal_fprintf(file,"%hd",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_ushort(DeimosFile file, AQUShort value) {
-    return deimos_internal_fprintf(file,"%hu",value);
+DeimosStatus deimos_output_ushort(DeimosFile file, AQUShort value) {
+    if (deimos_internal_fprintf(file,"%hu",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_integer(DeimosFile file, AQInt value) {
-    return deimos_internal_fprintf(file,"%d",value);
+DeimosStatus deimos_output_integer(DeimosFile file, AQInt value) {
+    if (deimos_internal_fprintf(file,"%d",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_uinteger(DeimosFile file, AQUInt value) {
-    return deimos_internal_fprintf(file,"%u",value);
+DeimosStatus deimos_output_uinteger(DeimosFile file, AQUInt value) {
+    if (deimos_internal_fprintf(file,"%u",value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_long(DeimosFile file, AQLong value) {
+DeimosStatus deimos_output_long(DeimosFile file, AQLong value) {
     #ifdef _WIN32
-     return deimos_internal_fprintf(file,"%lld",value);
+     if (deimos_internal_fprintf(file,"%lld",value) != 0) return DeimosFailure;
     #else
-     return deimos_internal_fprintf(file,"%ld",value);
+     if (deimos_internal_fprintf(file,"%ld",value) != 0) return DeimosFailure;
     #endif
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_ulong(DeimosFile file, AQULong value) {
+DeimosStatus deimos_output_ulong(DeimosFile file, AQULong value) {
     #ifdef _WIN32
-      return deimos_internal_fprintf(file,"%llu",value);
+      if (deimos_internal_fprintf(file,"%llu",value) != 0) return DeimosFailure;
     #else
-      return deimos_internal_fprintf(file,"%lu",value);
+      if (deimos_internal_fprintf(file,"%lu",value) != 0) return DeimosFailure;
     #endif
+    return DeimosSuccess;
 }
 
-AQInt deimos_output_float(DeimosFile file, AQFloat value) {
-    return deimos_internal_fprintf(file,"%.*f",DECIMAL_DIG + 6,value);
+DeimosStatus deimos_output_float(DeimosFile file, AQFloat value) {
+    if (deimos_internal_fprintf(file,"%.*f",DECIMAL_DIG + 6,value) != 0) return DeimosFailure;
+    return DeimosSuccess;     
 }
 
-AQInt deimos_output_double(DeimosFile file, AQDouble value) {
-    return deimos_internal_fprintf(file,"%.*lf",DECIMAL_DIG + 6,value);
+DeimosStatus deimos_output_double(DeimosFile file, AQDouble value) {
+    if (deimos_internal_fprintf(file,"%.*lf",DECIMAL_DIG + 6,value) != 0) return DeimosFailure;
+    return DeimosSuccess;
 }
 
 AQByte deimos_get_binary_byte(DeimosFile file) {
     return deimos_internal_fgetc(file);
 }
 
-AQInt deimos_output_binary_byte(DeimosFile file, AQByte byte) {
-    return deimos_internal_fputc(byte,file);
+DeimosStatus deimos_output_binary_byte(DeimosFile file, AQByte byte) {
+    if (deimos_internal_fputc(byte,file) == EOF) return DeimosFailure;
+    return DeimosSuccess;
 }
 
 /*
@@ -516,26 +529,30 @@ static AQInt deimos_internal_is_b32s_set_2(AQInt value) {
     return 0;  
 }
 
-static void deimos_internal_b32s_encode_character(DeimosFile encoded_file, AQInt character) {
+static DeimosStatus deimos_internal_b32s_encode_character(DeimosFile encoded_file, AQInt character) {
+    AQInt result = 0;
     AQDouble A, B, C = 0;
     if (character <= 31) {
-        deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(character));
+        result = deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(character));
     }
     if (character > 31) {
         A = character / 32.0;
         C = modf(A,&B);
         A = C * 32;
         deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_2_encode(A));
-        deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(B));
+        result = deimos_output_binary_byte(encoded_file,deimos_internal_b32s_set_1_encode(B));
     }
+    return (result == EOF) ? DeimosFailure : DeimosSuccess;
 }
 
-AQInt deimos_get_base_32_star_encode(DeimosFile file_to_encode, DeimosFile encoded_file) {
+DeimosStatus deimos_get_base_32_star_encode(DeimosFile file_to_encode, DeimosFile encoded_file) {
     AQInt character = 0;
     while ((character = deimos_internal_fgetc(file_to_encode)) != EOF) {
-        deimos_internal_b32s_encode_character(encoded_file,deimos_internal_b32s_mapping(character));
+        if (deimos_internal_b32s_encode_character(encoded_file,
+         deimos_internal_b32s_mapping(character)) == DeimosFailure)
+          return DeimosFailure;
     }
-    return 0;
+    return DeimosSuccess;
 }
 
 static AQInt deimos_internal_b32s_decode_character(DeimosFile encoded_file, AQInt character) {
@@ -551,15 +568,15 @@ static AQInt deimos_internal_b32s_decode_character(DeimosFile encoded_file, AQIn
    return EOF;
 }
 
-AQInt deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decoded_file) {
+DeimosStatus deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decoded_file) {
     AQInt character = 0;
     AQInt decoded_character = 0;
     while ((character = deimos_internal_fgetc(file_to_decode)) != EOF) {
         decoded_character = deimos_internal_b32s_decode_character(file_to_decode,character);
-        if (decoded_character == EOF) return EOF;
+        if (decoded_character == EOF) return DeimosFailure;
         deimos_output_binary_byte(decoded_file,deimos_internal_b32s_mapping(decoded_character)); 
     }
-    return 0;
+    return DeimosSuccess;
 }
 
 AQInt deimos_get_utf32_character(DeimosFile file) {
@@ -574,7 +591,7 @@ AQInt deimos_get_utf32_character(DeimosFile file) {
     AQSByte basebyte = 0;
    loop:
     byte = deimos_internal_fgetc(file);
-    if ( byte == EOF ) return EOF;
+    if ( byte == EOF ) return DeimosFailure;
     basebyte = byte;
     if ( byte > 0 ) {
         n = 1;
@@ -632,7 +649,7 @@ AQInt deimos_peek_utf32_character(DeimosFile file, AQULong* offset) {
     AQULong file_position = deimos_get_file_position(file);
    skip: 
     AQInt character = deimos_get_utf32_character(file);
-    if (character == EOF) return EOF;
+    if (character == EOF) return DeimosFailure;
     if (isspace(character)) goto skip;
     *offset = deimos_get_file_position(file) - file_position;
     deimos_set_file_position(file,file_position);
@@ -645,19 +662,22 @@ AQInt deimos_peek_last_utf32_character(DeimosFile file, AQULong offset) {
     deimos_set_file_position(file,last);
    skip:   
     AQInt character = deimos_get_utf32_character(file);
-    if (character == EOF) return EOF;
+    if (character == EOF) return DeimosFailure;
     if (isspace(character)) goto skip;
     deimos_set_file_position(file,file_position);
     return character;
 }
 
-AQInt deimos_output_utf32_character(DeimosFile file, AQInt character) {
+DeimosStatus deimos_output_utf32_character(DeimosFile file, AQInt character) {
     const AQInt* text = &character;
     AQString string = aqstring_new_from_utf32(text,1);
     AQChar* c_string = aqstring_convert_to_c_string(string);
-    if (deimos_internal_fprintf(file,"%s",c_string) == EOF) 
-     return EOF;
+    if (deimos_internal_fprintf(file,"%s",c_string) != 0) {
+       free(c_string);
+       return DeimosFailure;
+    }
     free(c_string);
+    return DeimosSuccess;
 }
  
 #ifdef _WIN32
@@ -674,8 +694,9 @@ AQAny deimos_load_library_file(const AQChar* filepath) {
     return deimos_internal_macro_dlopen(filepath);
 }
 
-AQInt deimos_free_library(AQAny library) {
-    return deimos_internal_macro_dlclose(library) ;
+DeimosStatus deimos_free_library(AQAny library) {
+    return 
+     (deimos_internal_macro_dlclose(library) != 0) ? DeimosFailure : DeimosSuccess;
 }
 
 AQAny deimos_get_function(AQAny library, const AQChar* name) {

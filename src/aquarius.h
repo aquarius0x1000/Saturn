@@ -60,6 +60,16 @@ typedef enum {
   AQAnyFlag = 11
 } AQTypeFlag;
 
+typedef enum {
+  AQSuccessValue = 1,
+  AQFailureValue = 0
+} AQStatus;
+
+typedef enum {
+  AQTrue = 1,
+  AQFalse = 0
+} AQBool;
+
 #define aq_vectordef(base_type,vector_input_size,new_vector_type) \
  typedef base_type new_vector_type __attribute__ ((vector_size (sizeof(base_type)*vector_input_size)))
 
@@ -166,7 +176,7 @@ typedef struct {
 } AQMTAContainer;
 
 typedef void (*AQIteratorLambda)(AQAny data);
-typedef void (*AQDestroyerLambda)(AQDataStructure ds);
+typedef AQStatus (*AQDestroyerLambda)(AQDataStructure ds);
 typedef void (*AQByteIteratorLambda)(AQByte character);
 typedef void (*AQCharacterIteratorLambda)(AQUInt character);
 typedef AQAny (*AQGetDataFromArrayLambda)(AQAny array, AQULong index);
@@ -231,8 +241,8 @@ AQInt aqprint_double(AQDouble value);
 AQAllocator aqmem_default_allocator(void);
 AQAny aqmem_malloc(AQULong size_in_bytes);
 AQAny aqmem_malloc_with_allocator(AQULong size_in_bytes, AQAllocator allocator);
-void aqmem_free(AQAny data);
-void aqmem_free_with_allocator(AQAny data, AQAllocator allocator);
+AQStatus aqmem_free(AQAny data);
+AQStatus aqmem_free_with_allocator(AQAny data, AQAllocator allocator);
 AQAny aqmem_realloc(AQAny data, AQULong newsize,
     AQULong oldsize, AQInt NULLonError0No1Yes);
 AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
@@ -241,7 +251,7 @@ AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
 
 #define aq_destroy(data) aqds_destroy((AQDataStructure)data)
 
-void aqds_destroy(AQDataStructure ds);
+AQStatus aqds_destroy(AQDataStructure ds);
 AQDataStructureFlag aqds_get_flag(AQDataStructure ds);        
 
     
@@ -257,16 +267,16 @@ AQArray aqarray_new(void);
 AQArray aqarray_new_with_allocator(AQAllocator allocator);
 AQArray aqarray_new_with_base_size(AQULong base_size);
 AQArray aqarray_new_with_base_size_with_allocator(AQULong base_size, AQAllocator allocator);
-void aqarray_destroy(AQArray array);
-void aqarray_add_item(AQArray array, AQAny item);
-void aqarray_remove_item(AQArray array);
-void aqarray_add_array(AQArray array, AQAny items[], AQULong num_of_items_to_add);
-void aqarray_add_space(AQArray array, AQULong space_to_add);
-void aqarray_remove_space(AQArray array, AQULong space_to_remove);
+AQStatus aqarray_destroy(AQArray array);
+AQStatus aqarray_add_item(AQArray array, AQAny item);
+AQStatus aqarray_remove_item(AQArray array);
+AQStatus aqarray_add_array(AQArray array, AQAny items[], AQULong num_of_items_to_add);
+AQStatus aqarray_add_space(AQArray array, AQULong space_to_add);
+AQStatus aqarray_remove_space(AQArray array, AQULong space_to_remove);
 AQAny aqarray_get_item(AQArray array, AQULong index);
-AQInt aqarray_set_item(AQArray array, AQULong index, AQAny item);
+AQStatus aqarray_set_item(AQArray array, AQULong index, AQAny item);
 AQULong aqarray_get_num_of_items(AQArray array);
-void aqarray_iterate_with(AQIteratorLambda iterator, AQArray array);
+AQStatus aqarray_iterate_with(AQIteratorLambda iterator, AQArray array);
  
  
 #define aq_new_string(string,...) _Generic((string __VA_OPT__(,) __VA_ARGS__), \
@@ -300,7 +310,7 @@ AQString aqstring_new_from_c_string_with_allocator(const AQChar* text,
 AQString aqstring_new_from_two_strings(AQString a, AQString b);
 AQString aqstring_new_from_two_strings_with_allocator(AQString a,
    AQString b, AQAllocator allocator);
-void aqstring_destroy(AQString string);
+AQStatus aqstring_destroy(AQString string);
 AQAllocator aqstring_get_allocator(AQString string);
 AQULong aqstring_get_size(AQString string);
 AQULong aqstring_get_size_in_bytes(AQString string);
@@ -308,18 +318,18 @@ AQULong aqstring_get_length(AQString string);
 AQChar* aqstring_get_c_string(AQString string);
 AQUInt aqstring_get_character(AQString string, AQULong index, AQSByte* offset);
 AQByte aqstring_get_byte(AQString string, AQULong index);
-void aqstring_set_byte(AQString string, AQULong index, AQByte byte);
+AQStatus aqstring_set_byte(AQString string, AQULong index, AQByte byte);
 AQString aqstring_append(AQString base_string, AQString appending_string);
 AQString aqstring_copy(AQString string);
-AQInt aqstring_are_equal(AQString a, AQString b);
+AQBool aqstring_are_equal(AQString a, AQString b);
 AQChar* aqstring_convert_to_c_string(AQString string);
 AQInt aqstring_print(AQString string);
 AQUInt* aqstring_get_utf32_string(AQString string, AQULong* length);
 AQString aqstring_get_string_for_ascii(AQString string);
 AQString aqstring_swap_escape_sequences_with_characters(AQString string);
 AQString aqstring_expand(AQString string, AQULong expand_amount);
-void aqstring_iterate_bytes_with(AQByteIteratorLambda iterator, AQString string);
-void aqstring_iterate_characters_with(AQCharacterIteratorLambda iterator, AQString string);
+AQStatus aqstring_iterate_bytes_with(AQByteIteratorLambda iterator, AQString string);
+AQStatus aqstring_iterate_characters_with(AQCharacterIteratorLambda iterator, AQString string);
 
 
 #define aq_new_list(...)\
@@ -340,32 +350,32 @@ AQList aqlist_new_from_array_with_allocator(AQAny array,
   AQULong size, AQAllocator allocator);
 AQListNode aqlist_new_node(AQList list, AQListNode before,
    AQListNode after, AQAny item);
-void aqlist_destroy(AQList list);
-void aqlist_destroy_node(AQList list, AQListNode node);
-void aqlist_destroy_node_with_index(AQList list, AQULong index);
+AQStatus aqlist_destroy(AQList list);
+AQStatus aqlist_destroy_node(AQList list, AQListNode node);
+AQStatus aqlist_destroy_node_with_index(AQList list, AQULong index);
 AQListNode aqlist_destroy_node_get_next(AQList list, AQListNode node);
-void aqlist_destroy_all_nodes(AQList list);
+AQStatus aqlist_destroy_all_nodes(AQList list);
 AQListNode aqlist_add_item(AQList list, AQAny item);
 AQListNode aqlist_add_node(AQList list, AQListNode node);
-void aqlist_node_swap(AQList list, AQListNode node_a, AQListNode node_b);
-void aqlist_item_swap(AQListNode node_a, AQListNode node_b);
-void aqlist_insert_a_to_b(AQList list, AQListNode node_a, AQListNode node_b);
+AQStatus aqlist_node_swap(AQList list, AQListNode node_a, AQListNode node_b);
+AQStatus aqlist_item_swap(AQListNode node_a, AQListNode node_b);
+AQStatus aqlist_insert_a_to_b(AQList list, AQListNode node_a, AQListNode node_b);
 AQListNode aqlist_move_node(AQListNode node, AQList list_a, AQList list_b);
-void aqlist_copy(AQList list_a, AQList list_b);
-void aqlist_copy_from_array(AQList list, AQAny array,
+AQStatus aqlist_copy(AQList list_a, AQList list_b);
+AQStatus aqlist_copy_from_array(AQList list, AQAny array,
   AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size);
-void aqlist_set_item(AQListNode node, AQAny item);
+AQStatus aqlist_set_item(AQListNode node, AQAny item);
 AQAny aqlist_get_item(AQListNode node);
 AQListNode aqlist_next_node(AQListNode node);
 AQListNode aqlist_previous_node(AQListNode node);
 AQListNode aqlist_first_node(AQList list);
 AQListNode aqlist_last_node(AQList list);
-AQLong aqlist_num_of_nodes(AQList list);
+AQULong aqlist_num_of_nodes(AQList list);
 AQListNode aqlist_get_node(AQList list, AQULong index);
 AQULong aqlist_get_index(AQList list, AQListNode node);
 AQListNode aqlist_next_node_after_n(AQListNode node, AQULong n);
 AQListNode aqlist_previous_node_after_n(AQListNode node, AQULong n);
-void aqlist_iterate_with(AQIteratorLambda iterator, AQList list);
+AQStatus aqlist_iterate_with(AQIteratorLambda iterator, AQList list);
 
 
 #define aq_new_stack(...)\
@@ -373,11 +383,11 @@ void aqlist_iterate_with(AQIteratorLambda iterator, AQList list);
 
 AQStack aqstack_new(void);
 AQStack aqstack_new_with_allocator(AQAllocator allocator);
-void aqstack_destroy(AQStack stack);
-void aqstack_push_item(AQStack stack, AQAny item);
+AQStatus aqstack_destroy(AQStack stack);
+AQStatus aqstack_push_item(AQStack stack, AQAny item);
 AQAny aqstack_pop_item(AQStack stack);
 AQAny aqstack_peek_item(AQStack stack);
-AQInt aqstack_is_empty(AQStack stack);
+AQBool aqstack_is_empty(AQStack stack);
 AQList aqstack_get_list(AQStack stack);
 AQListNode aqstack_get_list_node(AQStack stack);
 
@@ -387,12 +397,12 @@ AQListNode aqstack_get_list_node(AQStack stack);
 
 AQStackBuffer aqstackbuffer_new(void);
 AQStackBuffer aqstackbuffer_new_with_allocator(AQAllocator allocator);
-void aqstackbuffer_destroy(AQStackBuffer stack);
-void aqstackbuffer_set_rate(AQStackBuffer stack, AQULong rate);
-void aqstackbuffer_push_item(AQStackBuffer stack, AQAny item);
+AQStatus aqstackbuffer_destroy(AQStackBuffer stack);
+AQStatus aqstackbuffer_set_rate(AQStackBuffer stack, AQULong rate);
+AQStatus aqstackbuffer_push_item(AQStackBuffer stack, AQAny item);
 AQAny aqstackbuffer_pop_item(AQStackBuffer stack);
 AQAny aqstackbuffer_peek_item(AQStackBuffer stack);
-AQInt aqstackbuffer_is_empty(AQStackBuffer stack);
+AQBool aqstackbuffer_is_empty(AQStackBuffer stack);
 AQArray aqstackbuffer_get_array(AQStackBuffer stack);
 
 
@@ -461,23 +471,23 @@ AQArray aqstackbuffer_get_array(AQStackBuffer stack);
   }
      
 #define aq_mta_declare_add(type)\
- AQInt aqmta_add_item_##type(AQMultiTypeArray mta, type value)
+ AQStatus aqmta_add_item_##type(AQMultiTypeArray mta, type value)
 #define aq_mta_declare_remove_item(type)\
- AQInt aqmta_remove_item_##type(AQMultiTypeArray mta)
+ AQStatus aqmta_remove_item_##type(AQMultiTypeArray mta)
 #define aq_mta_declare_add_space(type)\
- AQInt aqmta_add_space_##type(AQMultiTypeArray mta, AQULong space_to_add)
+ AQStatus aqmta_add_space_##type(AQMultiTypeArray mta, AQULong space_to_add)
 #define aq_mta_declare_remove_space(type)\
- AQInt aqmta_remove_space_##type(AQMultiTypeArray mta, AQULong space_to_remove)
+ AQStatus aqmta_remove_space_##type(AQMultiTypeArray mta, AQULong space_to_remove)
 #define aq_mta_declare_get(type)\
  type aqmta_get_item_##type(AQMultiTypeArray mta, AQULong index) 
 #define aq_mta_declare_set(type)\
- void aqmta_set_item_##type(AQMultiTypeArray mta, AQULong index, type value)
+ AQStatus aqmta_set_item_##type(AQMultiTypeArray mta, AQULong index, type value)
 #define aq_mta_foreach(type,index,mta) for (AQULong index = 0; index < aq_mta_get_num_of_items(type,mta); index++) 
 #define aq_mta_foreachtype(index,mta) for (AQULong index = 0; index < aqmta_get_num_of_items_all_types(mta); index++)
 
 AQMultiTypeArray aqmta_new(void);
 AQMultiTypeArray aqmta_new_with_allocator(AQAllocator allocator);
-void aqmta_destroy(AQMultiTypeArray mta);
+AQStatus aqmta_destroy(AQMultiTypeArray mta);
 aq_mta_declare_add(AQByte);
 aq_mta_declare_add(AQSByte);
 aq_mta_declare_add(AQShort);
@@ -547,7 +557,7 @@ aq_mta_declare_set(AQAny);
 AQULong aqmta_get_num_of_items(AQMultiTypeArray mta, AQTypeFlag type_flag);
 AQULong aqmta_get_num_of_items_all_types(AQMultiTypeArray mta);
 AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index);
-void aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mta);
+AQStatus aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mta);
 
 
 #define aq_new_mtastackbuffer(...)\
@@ -606,7 +616,7 @@ void aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mt
   }    
   
 #define aq_mtastackbuffer_declare_push_item(type)\
- void aqmtastackbuffer_push_item##type(AQMTAStackBuffer stack, type item) 
+ AQStatus aqmtastackbuffer_push_item##type(AQMTAStackBuffer stack, type item) 
 #define aq_mtastackbuffer_declare_pop_item(type)\
  type aqmtastackbuffer_pop_item##type(AQMTAStackBuffer stack)
 #define aq_mtastackbuffer_declare_peek_item(type)\
@@ -614,8 +624,8 @@ void aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mt
 
 AQMTAStackBuffer aqmtastackbuffer_new(void);
 AQMTAStackBuffer aqmtastackbuffer_new_with_allocator(AQAllocator allocator);
-void aqmtastackbuffer_destroy(AQMTAStackBuffer stack);
-void aqmtastackbuffer_set_rate(AQMTAStackBuffer stack, AQULong rate);
+AQStatus aqmtastackbuffer_destroy(AQMTAStackBuffer stack);
+AQStatus aqmtastackbuffer_set_rate(AQMTAStackBuffer stack, AQULong rate);
 AQTypeFlag aqmtastackbuffer_peek_type(AQMTAStackBuffer stack);
 aq_mtastackbuffer_declare_push_item(AQByte);
 aq_mtastackbuffer_declare_push_item(AQSByte);
@@ -650,7 +660,7 @@ aq_mtastackbuffer_declare_peek_item(AQULong);
 aq_mtastackbuffer_declare_peek_item(AQFloat);
 aq_mtastackbuffer_declare_peek_item(AQDouble);
 aq_mtastackbuffer_declare_peek_item(AQAny);
-AQInt aqmtastackbuffer_is_empty(AQMTAStackBuffer stack);
+AQBool aqmtastackbuffer_is_empty(AQMTAStackBuffer stack);
 AQMultiTypeArray aqmtastackbuffer_get_mta(AQMTAStackBuffer stack);
 
 
@@ -661,18 +671,18 @@ AQMultiTypeArray aqmtastackbuffer_get_mta(AQMTAStackBuffer stack);
 AQStore aqstore_new(void);
 AQStore aqstore_new_with_allocator(AQAllocator allocator);
 AQAllocator aqstore_get_allocator(AQStore store);
-void aqstore_destroy(AQStore store);
-AQInt aqstore_add_item(AQStore store, AQAny item, const AQChar* label);
-AQInt aqstore_remove_item(AQStore store, const AQChar* label);
+AQStatus aqstore_destroy(AQStore store);
+AQStatus aqstore_add_item(AQStore store, AQAny item, const AQChar* label);
+AQStatus aqstore_remove_item(AQStore store, const AQChar* label);
 AQAny aqstore_get_item(AQStore store, const AQChar* label);
 AQAny aqstore_get_item_with_character(AQStore store, AQInt character);
-AQInt aqstore_item_exists(AQStore store, const AQChar* label);
-AQInt aqstore_num_of_items(AQStore store);
-AQInt aqstore_is_store_empty(AQStore store);
-AQInt aqstore_add_item_to_list(AQStore store, AQAny item);
+AQBool aqstore_item_exists(AQStore store, const AQChar* label);
+AQULong aqstore_num_of_items(AQStore store);
+AQBool aqstore_is_store_empty(AQStore store);
+AQStatus aqstore_add_item_to_list(AQStore store, AQAny item);
 AQList aqstore_get_list(AQStore store);
 AQString aqstore_label_from_list_node(AQListNode node);
-void aqstore_iterate_store_with(AQIteratorLambda iterator, AQStore store);
+AQStatus aqstore_iterate_store_with(AQIteratorLambda iterator, AQStore store);
 
 
 #define aq_any(any) aqany_new(&any,sizeof(any))

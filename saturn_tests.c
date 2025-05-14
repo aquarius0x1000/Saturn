@@ -3,12 +3,12 @@
 #include "src/prometheus.h"
   
 AQAny test_malloc(AQAny allocation_data, AQULong size_in_bytes) {
-    puts("Hello from the world!!!!!!!!!");
+    //puts("Hello from the world!!!!!!!!!");
     return malloc(size_in_bytes);
 }
 
 void test_free(AQAny allocation_data, AQAny data_to_be_freed) {
-    puts("FREE!!!!!");
+    //puts("FREE!!!!!");
     return free(data_to_be_freed);
 }
 
@@ -26,15 +26,16 @@ typedef struct {
   AQInt count;
 } TestDataStructure;
 
-void destroy_TestDataStructure(AQDataStructure ds) {
+AQStatus destroy_TestDataStructure(AQDataStructure ds) {
    free(ds);
+   return AQSuccessValue;
 }
 
-AQInt get_count_for_TestDataStructure(AQDataStructure ds, AQULong* index,
+PrometheusListStatus get_count_for_TestDataStructure(AQDataStructure ds, AQULong* index,
  AQMTAContainer* container) {
     AQULong i = *index;
     TestDataStructure* test = ds;
-    if (i >= test->count) return PROMETHEUS_LIST_DONE;
+    if (i >= test->count) return PrometheusListDone;
     AQMTAContainer the_container;
     the_container.flag = AQMTAContainerFlag;
     the_container.type = AQIntFlag;
@@ -42,19 +43,18 @@ AQInt get_count_for_TestDataStructure(AQDataStructure ds, AQULong* index,
     *container = the_container;
     i++;
     *index = i;
-    return PROMETHEUS_LIST_NOT_DONE;
+    return PrometheusListNotDone;
 }
 
-AQInt output_container_TestDataStructure(DeimosFile file, AQDataStructure ds, 
+AQStatus output_container_TestDataStructure(DeimosFile file, AQDataStructure ds, 
  PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block) {
     return print_list(file,ds,get_count_for_TestDataStructure);
 }
 
-AQInt serialize_TestDataStructure(DeimosFile file, AQChar* label, AQDataStructure ds,
+AQStatus serialize_TestDataStructure(DeimosFile file, AQChar* label, AQDataStructure ds,
  PrometheusAccessOutputContainerLambda output_container) {
-    output_container(file,label,aqstr("#TestDataStructure"),
+    return output_container(file,label,aqstr("#TestDataStructure"),
         ds,output_container_TestDataStructure);
-    return 1;
 }
 
 TestDataStructure* new_TestDataStructure(AQInt count) {
@@ -66,11 +66,11 @@ TestDataStructure* new_TestDataStructure(AQInt count) {
     return ds;
 }
 
-AQInt process_TestDataStructure(AQDataStructure ds, AQTypeFlag* type, AQULong* index,
+AQStatus process_TestDataStructure(AQDataStructure ds, AQTypeFlag* type, AQULong* index,
  AQMTAContainer* container) {
     *index = -1;
     ((TestDataStructure*)ds)->count = container->AQIntVal;
-    return 1;
+    return AQSuccessValue;
 }
 
 AQDataStructure generator_TestDataStructure(PrometheusDeserializer deserializer, 
@@ -418,7 +418,7 @@ void test_saturn(void) {
     aq_destroy(file);
     
     file2 = deimos_get_file_from_string(file_string,DeimosReadModeFlag);
-    the_deserializer = prometheus_deserializer_new(file);
+    the_deserializer = prometheus_deserializer_new(file2);
     test_data = (AQStore)prometheus_deserialize(the_deserializer);
     if (test_data == NULL) puts("NO!!");
     test_array = aqstore_get_item(test_data,"TESTDATA");
