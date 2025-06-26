@@ -199,6 +199,10 @@ AQStatus aqds_destroy(AQDataStructure ds) {
     return ds->destroyer(ds);
 }
 
+AQDataStructureFlag aqds_default_flag_noop(AQULong val) {
+    return AQNoDataStructureFlag;   
+}
+
 AQDataStructureFlag aqds_get_flag(AQDataStructure ds) {
     return ds->flag;
 }
@@ -238,6 +242,11 @@ AQStatus aqarray_destroy(AQArray array) {
     aq_free(array->items,array->allocator);
     aq_free(array,array->allocator);
     return AQSuccessValue;
+}
+
+AQAllocator aqarray_get_allocator(AQArray array) {
+    if (array == NULL) return NULL;
+    return array->allocator;
 }
 
 AQStatus aqarray_add_item(AQArray array, AQAny item) {
@@ -548,7 +557,7 @@ AQStatus aqstring_destroy(AQString string) {
 }
 
 AQAllocator aqstring_get_allocator(AQString string) {
-    if ( string == NULL ) return NULL;
+    if (string == NULL) return NULL;
     return string->allocator;
 }
 
@@ -1015,6 +1024,11 @@ AQStatus aqlist_destroy_all_nodes(AQList list) {
     return AQSuccessValue;
 }
 
+AQAllocator aqlist_get_allocator(AQList list) {
+    if (list == NULL) return NULL;
+    return list->allocator;
+}
+
 AQListNode aqlist_add_item(AQList list, AQAny item) {
     if (list == NULL) return NULL;
     if ( list->num_of_nodes == 0 ) {
@@ -1237,6 +1251,11 @@ AQStatus aqstack_destroy(AQStack stack) {
     return AQSuccessValue;
 }
 
+AQAllocator aqstack_get_allocator(AQStack stack) {
+    if (stack == NULL || stack->list == NULL) return NULL;
+    return stack->list->allocator;
+}
+
 AQStatus aqstack_push_item(AQStack stack, AQAny item) {
     if (stack == NULL) return AQFailureValue;
     if (aqlist_add_item(stack->list, item) == NULL)
@@ -1289,11 +1308,16 @@ AQStackBuffer aqstackbuffer_new_with_allocator(AQAllocator allocator) {
 }
 
 AQStatus aqstackbuffer_destroy(AQStackBuffer stack) {
-    if (stack == NULL) return AQFailureValue;
+    if (stack == NULL || stack->buffer == NULL) return AQFailureValue;
     AQAllocator allocator = stack->buffer->allocator;
     aqarray_destroy(stack->buffer);
     aq_free(stack,allocator);
     return AQSuccessValue;
+}
+
+AQAllocator aqstackbuffer_get_allocator(AQStackBuffer stack) {
+    if (stack == NULL || stack->buffer == NULL) return NULL;
+    return stack->buffer->allocator;
 }
 
 AQStatus aqstackbuffer_set_rate(AQStackBuffer stack, AQULong rate) {
@@ -1369,6 +1393,11 @@ AQStatus aqmta_destroy(AQMultiTypeArray mta) {
     } 
     aq_free(mta,allocator);
     return AQSuccessValue;
+}
+
+AQAllocator aqmta_get_allocator(AQMultiTypeArray mta) {
+    if (mta == NULL) return NULL;
+    return mta->allocator;
 }
 
 #define aq_mta_container_set_case(type,mta,container,index)\
@@ -1627,6 +1656,11 @@ AQStatus aqmtastackbuffer_destroy(AQMTAStackBuffer stack) {
     return AQSuccessValue;
 }
 
+AQAllocator aqmtastackbuffer_get_allocator(AQMTAStackBuffer stack) {
+    if (stack == NULL || stack->data_buffer->allocator) return NULL;
+    return stack->data_buffer->allocator;
+}
+
 AQStatus aqmtastackbuffer_set_rate(AQMTAStackBuffer stack, AQULong rate) {
     if (stack == NULL) return AQFailureValue;
     stack->rate = rate/2;
@@ -1779,7 +1813,7 @@ AQStore aqstore_new_with_allocator(AQAllocator allocator) {
 }
 
 AQAllocator aqstore_get_allocator(AQStore store) {
-    if (store == NULL || store->items == NULL) return NULL;
+    if (store == NULL) return NULL;
     return store->allocator;
 }
 

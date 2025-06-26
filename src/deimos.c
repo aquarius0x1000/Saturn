@@ -13,7 +13,7 @@ struct DeimosFile_s {
   AQDestroyerLambda destroyer;
   AQAllocator allocator;
   DeimosFileModeFlag mode; 
-  AQInt tab;
+  AQULong tab;
   AQULong index;
   FILE* file_struct;
   AQString file_buffer;
@@ -35,22 +35,32 @@ struct DeimosFile_s {
 static AQInt deimos_internal_fprintf(DeimosFile file, AQChar* format,...) {
     if ( file->mode != DeimosWriteModeFlag ) return EOF;
     AQInt result;
+    AQULong size; 
     va_list args;
+    va_list args2;
     va_start(args, format);
     if (file->backing == DeimosFileBackedFlag)
      result = vfprintf(file->file_struct,format,args);
     if (file->backing == DeimosStringBackedFlag) {
-     if ( file->index+1000 >= aqstring_get_size(file->file_buffer) )   
-      aqstring_expand(file->file_buffer,1000);       
-     if ( file->index > aqstring_get_size(file->file_buffer) ) result = EOF;
-     if ( file->index < 0 ) result = EOF;
-     if (result == EOF) goto end;
-     result = 
-      vsnprintf(&(aqstring_get_c_string(file->file_buffer)[file->index]),
-          aqstring_get_size_in_bytes(file->file_buffer)-file->index,
+       start:   
+        if ( file->index >= aqstring_get_size(file->file_buffer) )   
+         aqstring_expand(file->file_buffer,file->index-aqstring_get_size(file->file_buffer));       
+        if ( file->index > aqstring_get_size(file->file_buffer) ) result = EOF;
+        if ( file->index < 0 ) result = EOF;
+        if (result == EOF) goto end;
+        size = aqstring_get_size_in_bytes(file->file_buffer)-file->index;
+        va_copy(args2, args);
+        result =  
+         vsnprintf(&(aqstring_get_c_string(file->file_buffer)[file->index]),
+          size,
            format,
-            args);
-    if (result > 0) file->index += result;     
+            args2);
+        va_end(args2);        
+        if (result >= size) {
+            aqstring_expand(file->file_buffer,(result-size)+1);
+            goto start;    
+        }   
+        if (result > 0) file->index += result;     
     }
    end:        
     va_end(args);

@@ -250,8 +250,17 @@ AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
 
 
 #define aq_destroy(data) aqds_destroy((AQDataStructure)data)
+#define aq_get_ds_flag(...) _Generic((__VA_ARGS__),\
+  default: aqds_default_flag_noop,\
+  AQDataStructure: aqds_get_flag\
+)(__VA_ARGS__) 
+#define aq_get_ds_flag_for_any(...) _Generic((__VA_ARGS__),\
+  default: aqds_default_flag_noop,\
+  AQAny: aqds_get_flag\
+)(__VA_ARGS__) 
 
 AQStatus aqds_destroy(AQDataStructure ds);
+AQDataStructureFlag aqds_default_flag_noop(AQULong val);
 AQDataStructureFlag aqds_get_flag(AQDataStructure ds);        
 
     
@@ -268,6 +277,7 @@ AQArray aqarray_new_with_allocator(AQAllocator allocator);
 AQArray aqarray_new_with_base_size(AQULong base_size);
 AQArray aqarray_new_with_base_size_with_allocator(AQULong base_size, AQAllocator allocator);
 AQStatus aqarray_destroy(AQArray array);
+AQAllocator aqarray_get_allocator(AQArray array);
 AQStatus aqarray_add_item(AQArray array, AQAny item);
 AQStatus aqarray_remove_item(AQArray array);
 AQStatus aqarray_add_array(AQArray array, AQAny items[], AQULong num_of_items_to_add);
@@ -355,6 +365,7 @@ AQStatus aqlist_destroy_node(AQList list, AQListNode node);
 AQStatus aqlist_destroy_node_with_index(AQList list, AQULong index);
 AQListNode aqlist_destroy_node_get_next(AQList list, AQListNode node);
 AQStatus aqlist_destroy_all_nodes(AQList list);
+AQAllocator aqlist_get_allocator(AQList list);
 AQListNode aqlist_add_item(AQList list, AQAny item);
 AQListNode aqlist_add_node(AQList list, AQListNode node);
 AQStatus aqlist_node_swap(AQList list, AQListNode node_a, AQListNode node_b);
@@ -384,6 +395,7 @@ AQStatus aqlist_iterate_with(AQIteratorLambda iterator, AQList list);
 AQStack aqstack_new(void);
 AQStack aqstack_new_with_allocator(AQAllocator allocator);
 AQStatus aqstack_destroy(AQStack stack);
+AQAllocator aqstack_get_allocator(AQStack stack);
 AQStatus aqstack_push_item(AQStack stack, AQAny item);
 AQAny aqstack_pop_item(AQStack stack);
 AQAny aqstack_peek_item(AQStack stack);
@@ -398,6 +410,7 @@ AQListNode aqstack_get_list_node(AQStack stack);
 AQStackBuffer aqstackbuffer_new(void);
 AQStackBuffer aqstackbuffer_new_with_allocator(AQAllocator allocator);
 AQStatus aqstackbuffer_destroy(AQStackBuffer stack);
+AQAllocator aqstackbuffer_get_allocator(AQStackBuffer stack);
 AQStatus aqstackbuffer_set_rate(AQStackBuffer stack, AQULong rate);
 AQStatus aqstackbuffer_push_item(AQStackBuffer stack, AQAny item);
 AQAny aqstackbuffer_pop_item(AQStackBuffer stack);
@@ -488,6 +501,7 @@ AQArray aqstackbuffer_get_array(AQStackBuffer stack);
 AQMultiTypeArray aqmta_new(void);
 AQMultiTypeArray aqmta_new_with_allocator(AQAllocator allocator);
 AQStatus aqmta_destroy(AQMultiTypeArray mta);
+AQAllocator aqmta_get_allocator(AQMultiTypeArray mta);
 aq_mta_declare_add(AQByte);
 aq_mta_declare_add(AQSByte);
 aq_mta_declare_add(AQShort);
@@ -625,6 +639,7 @@ AQStatus aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArra
 AQMTAStackBuffer aqmtastackbuffer_new(void);
 AQMTAStackBuffer aqmtastackbuffer_new_with_allocator(AQAllocator allocator);
 AQStatus aqmtastackbuffer_destroy(AQMTAStackBuffer stack);
+AQAllocator aqmtastackbuffer_get_allocator(AQMTAStackBuffer stack);
 AQStatus aqmtastackbuffer_set_rate(AQMTAStackBuffer stack, AQULong rate);
 AQTypeFlag aqmtastackbuffer_peek_type(AQMTAStackBuffer stack);
 aq_mtastackbuffer_declare_push_item(AQByte);
