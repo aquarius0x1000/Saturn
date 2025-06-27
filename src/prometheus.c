@@ -114,7 +114,8 @@ static AQStatus prometheus_internal_output_container(DeimosFile file, AQChar* la
 
 static PrometheusBlockStatus prometheus_internal_output_array_block(DeimosFile file, AQDataStructure ds) {
     aq_array_foreach(index,ds) {
-        prometheus_serialize(file,aqarray_get_item(ds,index)); 
+        AQStatus result = prometheus_serialize(file,aqarray_get_item(ds,index));
+        if (!result) return PrometheusBlockDone; 
     }
     return PrometheusBlockDone;
 }
@@ -274,6 +275,19 @@ static AQStatus prometheus_internal_output_text_container(DeimosFile file, AQDat
     return print_list(file,ds,prometheus_internal_get_text_for_list);
 }
 
+static PrometheusBlockStatus prometheus_internal_output_list_block(DeimosFile file, AQDataStructure ds) {
+    aq_list_foreach(node,ds) {
+        AQStatus result = prometheus_serialize(file,aqlist_get_item(node));
+        if (!result) return PrometheusBlockDone;
+    }
+    return PrometheusBlockDone;
+}
+
+static AQStatus prometheus_internal_output_list_container(DeimosFile file, AQDataStructure ds, 
+ PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block) {
+    return print_block(file,ds,prometheus_internal_output_list_block);
+}
+
 static PrometheusBlockStatus prometheus_internal_output_store_block(DeimosFile file, AQDataStructure ds) {
     aq_store_foreach(node,ds) {
         AQStatus result = prometheus_serialize_with_label(file,
@@ -356,6 +370,7 @@ static AQStatus prometheus_internal_serialize(DeimosFile file, AQChar* label, Pr
     if (ds->flag == AQDestroyableFlag) {
         if (ds->serialize != NULL) status = 
          ds->serialize(file,label,ds,prometheus_access_output_container);
+        return status;
     }
     switch (ds->flag) {
         case AQArrayFlag:
@@ -374,6 +389,12 @@ static AQStatus prometheus_internal_serialize(DeimosFile file, AQChar* label, Pr
             status = 
              prometheus_internal_output_container(file,label,
               "@Text",ds,prometheus_internal_output_text_container);
+        break;
+        
+        case AQListFlag:
+            status = 
+             prometheus_internal_output_container(file,label,
+              "@List",ds,prometheus_internal_output_list_container);
         break;
         
         case AQStoreFlag:
@@ -784,6 +805,20 @@ static AQDataStructure prometheus_internal_array_adder(AQDataStructure ds,
     return ds_to_add;
 }
 
+static AQDataStructure prometheus_internal_list_generator(PrometheusDeserializer deserializer, 
+ AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
+  PrometheusAccessValueGeneratorLambda value_generator) {
+    AQList list = aq_new_list(deimos_get_allocator(deserializer->file)); 
+    if (list == NULL) return NULL;
+    return block_generator(deserializer,adder_type,list);
+}
+
+static AQDataStructure prometheus_internal_list_adder(AQDataStructure ds,
+ AQDataStructure ds_to_add, AQChar* label) {
+    aqlist_add_item((AQList)ds,ds_to_add);
+    return ds_to_add;
+}
+
 static AQDataStructure prometheus_internal_store_generator(PrometheusDeserializer deserializer, 
  AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
   PrometheusAccessValueGeneratorLambda value_generator) {
@@ -832,7 +867,10 @@ static AQStatus prometheus_internal_register_aqdatastructures(PrometheusDeserial
     if (!result) return AQFailureValue;
     result = prometheus_internal_register_deserializer(deserializer,"@Array",
      prometheus_internal_array_generator,prometheus_internal_array_adder);
-    if (!result) return AQFailureValue;   
+    if (!result) return AQFailureValue;
+    result = prometheus_internal_register_deserializer(deserializer,"@List",
+     prometheus_internal_list_generator,prometheus_internal_list_adder);
+    if (!result) return AQFailureValue; 
     result = prometheus_internal_register_deserializer(deserializer,"@Store",
      prometheus_internal_store_generator,prometheus_internal_store_adder);
     if (!result) return AQFailureValue;   
@@ -939,10 +977,12 @@ PrometheusDeserializer prometheus_deserializer_new(DeimosFile file) {
     return deserializer;
 }
  
-void prometheus_deserializer_destroy(PrometheusDeserializer deserializer) {
+AQStatus prometheus_deserializer_destroy(PrometheusDeserializer deserializer) {
+    if (deserializer == NULL) return AQFailureValue;
     aqstore_destroy(deserializer->generators);
     aqstore_destroy(deserializer->adders);
     aq_free(deserializer,deimos_get_allocator(deserializer->file));
+    return AQSuccessValue;
 }
 
 AQStatus prometheus_register_deserializer(PrometheusDeserializer deserializer, AQString name,

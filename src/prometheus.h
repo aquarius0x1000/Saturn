@@ -49,7 +49,7 @@ AQStatus prometheus_serialize(DeimosFile file, PrometheusDataStructure ds);
 AQStatus prometheus_serialize_with_label(DeimosFile file, AQString label, PrometheusDataStructure ds);
 
 PrometheusDeserializer prometheus_deserializer_new(DeimosFile file);
-void prometheus_deserializer_destroy(PrometheusDeserializer deserializer);
+AQStatus prometheus_deserializer_destroy(PrometheusDeserializer deserializer);
 AQStatus prometheus_register_deserializer(PrometheusDeserializer deserializer, AQString name,
  PrometheusGeneratorLambda generator, PrometheusAdderLambda adder);
 AQDataStructure prometheus_deserialize(PrometheusDeserializer deserializer);

@@ -265,12 +265,20 @@ void saturn_test_4(void) {
     container->flag = AQMTAContainerFlag;
     container->type = AQIntFlag;
     container->AQIntVal = 999;
+   
+    AQList list = aqlist_new();
+    aqlist_add_item(list,mta2000);
+    aqlist_add_item(list,string2999);
+    aqlist_add_item(list,ds500);
+    aqlist_add_item(list,ds500);
+    aqlist_add_item(list,container);
     
     aqarray_add_item(array2999,mta2999);
     aqarray_add_item(array2999,mta2000);
     aqarray_add_item(array2999,string2999);
     aqarray_add_item(array2999,ds500);
     aqarray_add_item(array2999,container);
+    aqarray_add_item(array2999,list);
     
     
     aqarray_add_item(array999,array2999);
@@ -280,10 +288,11 @@ void saturn_test_4(void) {
     aqstore_add_item(store500,array999,"THE ARRAY");
     
     prometheus_serialize(file,(PrometheusDataStructure)array999);
-    
+   
     prometheus_serialize(file,(PrometheusDataStructure)store500);
     
-    free(container);
+    aq_free(container);
+    aq_destroy(list);
     aq_destroy(ds500);
     aq_destroy(store500);
     aq_destroy(array999);
@@ -342,8 +351,8 @@ void saturn_test_4(void) {
     
     printf("PRINT FILE STRING: %s",aqstring_get_c_string(file_string_999));
     
-    aq_destroy(file);
-    aq_destroy(file999);
-    aq_destroy(file_string_999);
     aq_destroy(deserializer);
+    aq_destroy(file_string_999);
+    aq_destroy(file999);
+    aq_destroy(file);
 }

@@ -195,7 +195,7 @@ AQAny aqmem_realloc_with_allocator(AQAny data, AQULong newsize,
 }
 
 AQStatus aqds_destroy(AQDataStructure ds) {
-    if (ds == NULL) return AQFailureValue; 
+    if (ds == NULL) return AQFailureValue;
     return ds->destroyer(ds);
 }
 
