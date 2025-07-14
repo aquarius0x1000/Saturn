@@ -31,7 +31,7 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
  DeimosFileModeFlag mode, AQAllocator allocator);
 DeimosFile deimos_get_file_from_string(AQString string,
  DeimosFileModeFlag mode);     
-void deimos_close_file(DeimosFile file);
+DeimosStatus deimos_close_file(DeimosFile file);
 
 AQAllocator deimos_get_allocator(DeimosFile file);
 FILE* deimos_get_file_struct(DeimosFile file);

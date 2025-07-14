@@ -5,8 +5,9 @@ static AQAny test_malloc(AQAny allocation_data, AQULong size_in_bytes) {
     return malloc(size_in_bytes);
 }
 
-static void test_free(AQAny allocation_data, AQAny data_to_be_freed) {
-    return free(data_to_be_freed);
+static AQStatus test_free(AQAny allocation_data, AQAny data_to_be_freed) {
+    free(data_to_be_freed);
+    return AQSuccessValue;
 }
 
 typedef struct {
@@ -273,12 +274,21 @@ void saturn_test_4(void) {
     aqlist_add_item(list,ds500);
     aqlist_add_item(list,container);
     
+    AQArrayStore array_store = aqarraystore_new();
+    aqarraystore_add_item(array_store,mta2000);
+    aqarraystore_add_item(array_store,string2999);
+    aqarraystore_add_item(array_store,ds500);
+    aqarraystore_add_item(array_store,ds500);
+    aqarraystore_set_item(array_store,container,500);
+    aqarraystore_set_item(array_store,container,501);
+    
     aqarray_add_item(array2999,mta2999);
     aqarray_add_item(array2999,mta2000);
     aqarray_add_item(array2999,string2999);
     aqarray_add_item(array2999,ds500);
     aqarray_add_item(array2999,container);
     aqarray_add_item(array2999,list);
+    aqarray_add_item(array2999,array_store);
     
     
     aqarray_add_item(array999,array2999);
@@ -293,6 +303,7 @@ void saturn_test_4(void) {
     
     aq_free(container);
     aq_destroy(list);
+    aq_destroy(array_store);
     aq_destroy(ds500);
     aq_destroy(store500);
     aq_destroy(array999);

@@ -151,12 +151,18 @@ DeimosFile deimos_get_file_from_string(AQString string, DeimosFileModeFlag mode)
     return file;
 }
 
-void deimos_close_file(DeimosFile file) {
+DeimosStatus deimos_close_file(DeimosFile file) {
+    if (file == NULL) return DeimosFailure;
+    DeimosStatus status = DeimosSuccess;
     if (file->backing == DeimosFileBackedFlag) 
-     fclose(file->file_struct);
+     if (fclose(file->file_struct) == EOF) 
+      status = DeimosFailure;
     if (file->backing == DeimosStringBackedFlag) 
-     aqstring_destroy(file->file_buffer);
-    aq_free(file,file->allocator);
+     if (aqstring_destroy(file->file_buffer) == AQFailureValue)
+      status = DeimosFailure;
+    if (aq_free(file,file->allocator) == AQFailureValue)
+     status = DeimosFailure;
+    return status;
 }
 
 AQAllocator deimos_get_allocator(DeimosFile file) {

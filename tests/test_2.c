@@ -5,9 +5,10 @@ static AQAny test_malloc(AQAny allocation_data, AQULong size_in_bytes) {
     return malloc(size_in_bytes);
 }
 
-static void test_free(AQAny allocation_data, AQAny data_to_be_freed) {
+static AQStatus test_free(AQAny allocation_data, AQAny data_to_be_freed) {
     puts("FREE!!!!!");
-    return free(data_to_be_freed);
+    free(data_to_be_freed);
+    return AQSuccessValue;
 }
 
 void saturn_test_2(void) {

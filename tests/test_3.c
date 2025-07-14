@@ -5,18 +5,20 @@ static AQAny test_malloc(AQAny allocation_data, AQULong size_in_bytes) {
     return malloc(size_in_bytes);
 }
 
-static void test_free(AQAny allocation_data, AQAny data_to_be_freed) {
+static AQStatus test_free(AQAny allocation_data, AQAny data_to_be_freed) {
     puts("FREE!!!!!");
-    return free(data_to_be_freed);
+    free(data_to_be_freed);
+    return AQSuccessValue;
 }
 
-static void test_mta(AQAny data) {
+static AQStatus test_mta(AQAny data) {
     AQMTAContainer container = *((AQMTAContainer*)data);
     aq_mta_define_itemvar(iterator_item);
     aq_mta_get_itemvar_from_container(container,iterator_item);
     if (iterator_item_AQInt == 42) puts("YES!!!!!42");
     if (iterator_item_AQInt == 958754) puts("YES!!!!!958754");
     if (iterator_item_AQByte == 255) puts("YES!!!!!255");
+    return AQSuccessValue; 
 }
 
 void saturn_test_3(void) {

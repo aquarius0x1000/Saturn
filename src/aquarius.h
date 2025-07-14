@@ -139,6 +139,7 @@ typedef enum {
   AQMTAStackBufferFlag,
   AQMTAContainerFlag,
   AQStoreFlag,
+  AQArrayStoreFlag
 } AQDataStructureFlag;
  
 #define AQ_DATA_STRUCTURE_BASE_CLASS\
@@ -155,6 +156,7 @@ typedef struct AQStackBuffer_s* AQStackBuffer;
 typedef struct AQMultiTypeArray_s* AQMultiTypeArray;
 typedef struct AQMTAStackBuffer_s* AQMTAStackBuffer;
 typedef struct AQStore_s* AQStore;
+typedef struct AQArrayStore_s* AQArrayStore;
 typedef void* AQAny;
 
 typedef struct {
@@ -175,13 +177,13 @@ typedef struct {
     }; 
 } AQMTAContainer;
 
-typedef void (*AQIteratorLambda)(AQAny data);
+typedef AQStatus (*AQIteratorLambda)(AQAny data);
 typedef AQStatus (*AQDestroyerLambda)(AQDataStructure ds);
-typedef void (*AQByteIteratorLambda)(AQByte character);
-typedef void (*AQCharacterIteratorLambda)(AQUInt character);
+typedef AQStatus (*AQByteIteratorLambda)(AQByte character);
+typedef AQStatus (*AQCharacterIteratorLambda)(AQUInt character);
 typedef AQAny (*AQGetDataFromArrayLambda)(AQAny array, AQULong index);
 typedef AQAny (*AQAllocatorLambda)(AQAny allocation_data, AQULong size_in_bytes);
-typedef void (*AQAllocatorFreeLambda)(AQAny allocation_data, AQAny data_to_be_freed);
+typedef AQStatus (*AQAllocatorFreeLambda)(AQAny allocation_data, AQAny data_to_be_freed);
 
 typedef struct {
   AQAny data;
@@ -685,20 +687,40 @@ AQMultiTypeArray aqmtastackbuffer_get_mta(AQMTAStackBuffer stack);
 
 AQStore aqstore_new(void);
 AQStore aqstore_new_with_allocator(AQAllocator allocator);
-AQAllocator aqstore_get_allocator(AQStore store);
 AQStatus aqstore_destroy(AQStore store);
+AQAllocator aqstore_get_allocator(AQStore store);
 AQStatus aqstore_add_item(AQStore store, AQAny item, const AQChar* label);
 AQStatus aqstore_remove_item(AQStore store, const AQChar* label);
 AQAny aqstore_get_item(AQStore store, const AQChar* label);
 AQAny aqstore_get_item_with_character(AQStore store, AQInt character);
 AQBool aqstore_item_exists(AQStore store, const AQChar* label);
 AQULong aqstore_num_of_items(AQStore store);
-AQBool aqstore_is_store_empty(AQStore store);
+AQBool aqstore_is_empty(AQStore store);
 AQStatus aqstore_add_item_to_list(AQStore store, AQAny item);
 AQList aqstore_get_list(AQStore store);
 AQString aqstore_label_from_list_node(AQListNode node);
 AQStatus aqstore_iterate_store_with(AQIteratorLambda iterator, AQStore store);
 
+
+#define aq_new_arraystore(...) \
+ aq_generic(aqarraystore_new_with_allocator,aqarraystore_new,__VA_ARGS__)
+#define aq_arraystore_foreach(node,store) aq_list_foreach(node,aqarraystore_get_list(store))
+
+AQArrayStore aqarraystore_new(void);
+AQArrayStore aqarraystore_new_with_allocator(AQAllocator allocator);
+AQStatus aqarraystore_destroy(AQArrayStore array_store);
+AQAllocator aqarraystore_get_allocator(AQArrayStore array_store);
+AQStatus aqarraystore_add_item(AQArrayStore array_store, AQAny item);
+AQStatus aqarraystore_set_item(AQArrayStore array_store, AQAny item, AQULong index);
+AQAny aqarraystore_get_item(AQArrayStore array_store, AQULong index);
+AQStatus aqarraystore_remove_item(AQArrayStore array_store, AQULong index);
+AQStatus aqarraystore_increment_index(AQArrayStore array_store);
+AQStatus aqarraystore_decrement_index(AQArrayStore array_store);
+AQULong aqarraystore_get_index(AQArrayStore array_store);
+AQStatus aqarraystore_set_index(AQArrayStore array_store, AQULong index);
+AQList aqarraystore_get_list(AQArrayStore array_store);
+AQStore aqarraystore_get_store(AQArrayStore array_store);
+AQBool aqarraystore_is_empty(AQArrayStore array_store);
 
 #define aq_any(any) aqany_new(&any,sizeof(any))
 #define aq_get(type,any) *((type*)any)

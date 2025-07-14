@@ -302,6 +302,40 @@ static AQStatus prometheus_internal_output_store_container(DeimosFile file, AQDa
     return print_block(file,ds,prometheus_internal_output_store_block);
 }
 
+static PrometheusListStatus prometheus_internal_get_arraystoreindex_for_list(AQDataStructure ds, AQULong* index,
+ AQMTAContainer* container) {
+    AQULong i = *index; 
+    AQMTAContainer the_container;
+    the_container.flag = AQMTAContainerFlag;
+    the_container.type = AQULongFlag;
+    the_container.AQULongVal = aqarraystore_get_index(ds);
+    *container = the_container;
+    i++;
+    *index = i;
+    return (i == 1) ? PrometheusListNotDone : PrometheusListDone;
+}
+
+static AQStatus prometheus_internal_output_arraystoreindex_container(DeimosFile file, AQDataStructure ds, 
+ PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block) {
+    return print_list(file,ds,prometheus_internal_get_arraystoreindex_for_list);
+}
+
+static PrometheusBlockStatus prometheus_internal_output_arraystore_block(DeimosFile file, AQDataStructure ds) {
+    prometheus_internal_output_container(file,NULL,"@ArrayStoreIndex",ds,
+         prometheus_internal_output_arraystoreindex_container);
+    aq_arraystore_foreach(node,ds) {
+        AQStatus result = prometheus_serialize_with_label(file,
+           aqstore_label_from_list_node(node),aqlist_get_item(node));
+        if (!result) return PrometheusBlockDone;    
+    }
+    return PrometheusBlockDone;
+}
+
+static AQStatus prometheus_internal_output_arraystore_container(DeimosFile file, AQDataStructure ds, 
+ PrometheusPrintListLambda print_list, PrometheusPrintBlockLambda print_block) {
+    return print_block(file,ds,prometheus_internal_output_arraystore_block);
+}
+
 /////////////////////////////////////////////////////End AQDataStructures//////////////////////////////////////////
 
 static AQChar* prometheus_internal_validate_label(AQString label) {
@@ -401,6 +435,12 @@ static AQStatus prometheus_internal_serialize(DeimosFile file, AQChar* label, Pr
             status = 
              prometheus_internal_output_container(file,label,
               "@Store",ds,prometheus_internal_output_store_container);
+        break;
+        
+        case AQArrayStoreFlag:
+            status = 
+             prometheus_internal_output_container(file,label,
+              "@ArrayStore",ds,prometheus_internal_output_arraystore_container);
         break;
         
         case AQMTAContainerFlag:
@@ -835,6 +875,46 @@ static AQDataStructure prometheus_internal_store_adder(AQDataStructure ds,
     return ds_to_add;
 }
 
+static AQDataStructure prometheus_internal_arraystore_generator(PrometheusDeserializer deserializer, 
+ AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
+  PrometheusAccessValueGeneratorLambda value_generator) {
+    AQArrayStore array_store = aq_new_arraystore(deimos_get_allocator(deserializer->file)); 
+    if (array_store == NULL) return NULL;
+    return block_generator(deserializer,adder_type,array_store);
+}
+
+static AQDataStructure prometheus_internal_arraystore_adder(AQDataStructure ds,
+ AQDataStructure ds_to_add, AQChar* label) {
+    AQStatus result = AQSuccessValue; 
+    if (ds != ds_to_add)
+     result = aqstore_add_item(aqarraystore_get_store(ds),ds_to_add,label);
+    if (!result) return NULL;
+    return ds_to_add;
+}
+
+static AQStatus prometheus_internal_process_arraystoreindex(AQDataStructure ds, AQTypeFlag* type, AQULong* index,
+ AQMTAContainer* container) {
+    *index = -1;
+    aqarraystore_set_index(ds,container->AQULongVal);
+    return AQSuccessValue;
+}
+
+static AQDataStructure prometheus_internal_arraystoreindex_generator(PrometheusDeserializer deserializer,
+ AQChar* adder_type, AQDataStructure super_ds, PrometheusAccessBlockGeneratorLambda block_generator,
+  PrometheusAccessValueGeneratorLambda value_generator) {
+     if (aqds_get_flag(super_ds) != AQArrayStoreFlag) return NULL;
+    AQDataStructure ds_to_add =
+     value_generator(deserializer,super_ds,
+      prometheus_internal_process_arraystoreindex,(AQTypeFlag[]){AQULongFlag},1);
+    if (ds_to_add == NULL) return NULL;
+    return ds_to_add;
+ }
+ 
+static AQDataStructure prometheus_internal_arraystoreindex_adder(AQDataStructure ds,
+ AQDataStructure ds_to_add, AQChar* label) {
+    return ds_to_add;
+}
+
 static AQStatus prometheus_internal_register_aqdatastructures(PrometheusDeserializer deserializer) {
     AQStatus result;
     prometheus_macro_register_value(AQByte,"@Byte");
@@ -873,7 +953,13 @@ static AQStatus prometheus_internal_register_aqdatastructures(PrometheusDeserial
     if (!result) return AQFailureValue; 
     result = prometheus_internal_register_deserializer(deserializer,"@Store",
      prometheus_internal_store_generator,prometheus_internal_store_adder);
-    if (!result) return AQFailureValue;   
+    if (!result) return AQFailureValue;
+    result = prometheus_internal_register_deserializer(deserializer,"@ArrayStore",
+     prometheus_internal_arraystore_generator,prometheus_internal_arraystore_adder);
+    if (!result) return AQFailureValue;
+    result = prometheus_internal_register_deserializer(deserializer,"@ArrayStoreIndex",
+     prometheus_internal_arraystoreindex_generator,prometheus_internal_arraystoreindex_adder);
+    if (!result) return AQFailureValue;
     return result; 
 }
 
@@ -895,7 +981,7 @@ static AQDataStructure prometheus_internal_generate_container(PrometheusDeserial
    validate_type:
         if (deimos_peek_utf32_character(file,&offset) == '@') {
             type = deimos_get_string(file,'@',']');
-            if (aqstring_get_size(type) > 7) return NULL;
+            if (aqstring_get_size(type) > 15) return NULL;
             valid_type = aq_add_strings(aqstr("@"),type);
         }
         if (deimos_peek_utf32_character(file,&offset) == '#') {
@@ -963,6 +1049,7 @@ static AQDataStructure prometheus_internal_deserialize(PrometheusDeserializer de
         ds = NULL;
         goto get_container;
     }
+    if (array != NULL) return array;
     return ds;
 }
 
@@ -979,10 +1066,15 @@ PrometheusDeserializer prometheus_deserializer_new(DeimosFile file) {
  
 AQStatus prometheus_deserializer_destroy(PrometheusDeserializer deserializer) {
     if (deserializer == NULL) return AQFailureValue;
-    aqstore_destroy(deserializer->generators);
-    aqstore_destroy(deserializer->adders);
-    aq_free(deserializer,deimos_get_allocator(deserializer->file));
-    return AQSuccessValue;
+    AQStatus status = AQSuccessValue;
+    if (aqstore_destroy(deserializer->generators) == AQFailureValue)
+     status = AQFailureValue;
+    if (aqstore_destroy(deserializer->adders) == AQFailureValue)
+     status = AQFailureValue;
+    if (aq_free(deserializer,
+     deimos_get_allocator(deserializer->file)) == AQFailureValue)
+      status = AQFailureValue;
+    return status;
 }
 
 AQStatus prometheus_register_deserializer(PrometheusDeserializer deserializer, AQString name,
