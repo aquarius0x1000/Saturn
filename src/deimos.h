@@ -1,8 +1,6 @@
 #ifndef deimos_h
 #define deimos_h
 
-#include "aquarius.h"
-
 typedef struct DeimosFile_s* DeimosFile;
 
 typedef enum { 
@@ -75,7 +73,46 @@ DeimosStatus deimos_output_float(DeimosFile file, AQFloat value);
 DeimosStatus deimos_output_double(DeimosFile file, AQDouble value);
 
 AQByte deimos_get_binary_byte(DeimosFile file);
+AQSByte deimos_get_binary_sbyte(DeimosFile file);
+AQShort deimos_get_binary_short(DeimosFile file);
+AQUShort deimos_get_binary_ushort(DeimosFile file);
+AQInt deimos_get_binary_integer(DeimosFile file);
+AQUInt deimos_get_binary_uinteger(DeimosFile file);
+AQLong deimos_get_binary_long(DeimosFile file);
+AQULong deimos_get_binary_ulong(DeimosFile file);
+AQFloat deimos_get_binary_float(DeimosFile file);
+AQDouble deimos_get_binary_double(DeimosFile file);
+
 DeimosStatus deimos_output_binary_byte(DeimosFile file, AQByte byte);
+DeimosStatus deimos_output_binary_sbyte(DeimosFile file, AQSByte value);
+DeimosStatus deimos_output_binary_short(DeimosFile file, AQShort value);
+DeimosStatus deimos_output_binary_ushort(DeimosFile file, AQUShort value);
+DeimosStatus deimos_output_binary_integer(DeimosFile file, AQInt value);
+DeimosStatus deimos_output_binary_uinteger(DeimosFile file, AQUInt value);
+DeimosStatus deimos_output_binary_long(DeimosFile file, AQLong value);
+DeimosStatus deimos_output_binary_ulong(DeimosFile file, AQULong value);
+DeimosStatus deimos_output_binary_float(DeimosFile file, AQFloat value);
+DeimosStatus deimos_output_binary_double(DeimosFile file, AQDouble value);
+
+
+AQDataStructure deimos_get_binary_aqds(DeimosFile file);
+AQMTAContainer* deimos_get_binary_mta_container(DeimosFile file);
+AQString deimos_get_binary_string(DeimosFile file);
+AQMultiTypeArray deimos_get_binary_mta(DeimosFile file);
+AQArray deimos_get_binary_array(DeimosFile file);
+AQList deimos_get_binary_list(DeimosFile file);
+AQStore deimos_get_binary_store(DeimosFile file);
+AQArrayStore deimos_get_binary_arraystore(DeimosFile file);
+
+DeimosStatus deimos_output_binary_aqds(DeimosFile file, AQDataStructure ds);
+DeimosStatus deimos_output_binary_mta_container(DeimosFile file, AQMTAContainer* container);
+DeimosStatus deimos_output_binary_string(DeimosFile file, AQString string);
+DeimosStatus deimos_output_binary_mta(DeimosFile file, AQMultiTypeArray mta);
+DeimosStatus deimos_output_binary_array(DeimosFile file, AQArray array);
+DeimosStatus deimos_output_binary_list(DeimosFile file, AQList list);
+DeimosStatus deimos_output_binary_store(DeimosFile file, AQStore store);
+DeimosStatus deimos_output_binary_arraystore(DeimosFile file, AQArrayStore array_store);
+
 
 DeimosStatus deimos_get_base_32_star_encode(DeimosFile file_to_encode, DeimosFile encoded_file);
 DeimosStatus deimos_get_base_32_star_decode(DeimosFile file_to_decode, DeimosFile decoded_file);

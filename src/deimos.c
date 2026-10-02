@@ -1,3 +1,4 @@
+#include "aquarius.h"
 #include "deimos.h"
 
 #ifdef _WIN32
@@ -91,10 +92,9 @@ static AQInt deimos_internal_fgetc(DeimosFile file) {
     if (file->backing == DeimosFileBackedFlag)
      return fgetc(file->file_struct);
     if (file->backing == DeimosStringBackedFlag)  {
-        if ( file->index > aqstring_get_size(file->file_buffer) ) return EOF;
-        if ( file->index < 0 ) return EOF;
+        if (file->index >= aqstring_get_size(file->file_buffer)) return EOF;
+        if (file->index < 0) return EOF;
         result = aqstring_get_byte(file->file_buffer,file->index);
-        if (result == '\0') return EOF;
         file->index++;
         return result;
     }
@@ -117,6 +117,42 @@ static AQInt deimos_internal_fputc(AQInt byte, DeimosFile file) {
     return EOF;
 }
 
+static AQULong deimos_internal_fread(DeimosFile file, void* ptr, AQULong size, AQULong nmemb) {
+    if (file == NULL || ptr == NULL) return 0;
+    if (file->mode != DeimosReadModeFlag) return 0;
+    if (file->backing == DeimosFileBackedFlag) 
+     return (AQULong)fread(ptr, size, nmemb, file->file_struct);
+    if (file->backing == DeimosStringBackedFlag) {
+        AQULong total_to_read = size * nmemb;
+        AQULong available = aqstring_get_size(file->file_buffer) - file->index;
+        if (available == 0) return 0;
+        AQULong actual_read = (total_to_read < available) ? total_to_read : available;
+        memcpy(ptr, &(aqstring_get_c_string(file->file_buffer)[file->index]), actual_read);
+        file->index += actual_read;
+        return actual_read / size;
+    }
+    return 0;
+}
+
+static AQULong deimos_internal_fwrite(DeimosFile file, const void* ptr, AQULong size, AQULong nmemb) {
+    if (file == NULL || ptr == NULL) return 0;
+    if (file->mode != DeimosWriteModeFlag) return 0;
+    if (file->backing == DeimosFileBackedFlag) 
+        return (AQULong)fwrite(ptr, size, nmemb, file->file_struct);
+    if (file->backing == DeimosStringBackedFlag) {
+        AQULong total_to_write = size * nmemb;
+        AQULong current_size = aqstring_get_size(file->file_buffer);
+        if (file->index + total_to_write > current_size) {
+            AQULong needed = (file->index + total_to_write) - current_size;
+            if (aqstring_expand(file->file_buffer, needed) == NULL) return 0;
+        }
+        memcpy(&(aqstring_get_c_string(file->file_buffer)[file->index]), ptr, total_to_write);
+        file->index += total_to_write;
+        return nmemb;
+    }
+    return 0;
+}
+
 DeimosFile deimos_open_file_without_allocator(const AQChar* filepath, DeimosFileModeFlag mode) {
     return deimos_open_file_with_allocator(filepath,mode,aqmem_default_allocator());
 }
@@ -124,6 +160,7 @@ DeimosFile deimos_open_file_without_allocator(const AQChar* filepath, DeimosFile
 DeimosFile deimos_open_file_with_allocator(const AQChar* filepath, 
      DeimosFileModeFlag mode, AQAllocator allocator) {
     DeimosFile file = aq_new(struct DeimosFile_s,allocator);
+    if (file == NULL) return NULL;
     file->flag = AQDestroyableFlag;
     file->destroyer = (AQDestroyerLambda)deimos_close_file;
     file->allocator = allocator;
@@ -139,6 +176,7 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
 
 DeimosFile deimos_get_file_from_string(AQString string, DeimosFileModeFlag mode) {
     DeimosFile file = aq_new(struct DeimosFile_s,aqstring_get_allocator(string));
+    if (file == NULL) return NULL;
     file->flag = AQDestroyableFlag;
     file->destroyer = (AQDestroyerLambda)deimos_close_file;
     file->allocator = aqstring_get_allocator(string);
@@ -238,11 +276,12 @@ AQString deimos_get_string(DeimosFile file, AQInt start, AQInt end) {
         num_of_characters++;
         if (string == NULL) string = aq_make_c_array(num_of_characters, AQInt);
         if (string != NULL) string = aq_realloc(string, num_of_characters,
-                num_of_characters-1, AQInt, 1);
+                num_of_characters-1, AQInt,1);
         string[num_of_characters-1] = character;     
     }
-    if (string == NULL) return NULL;
-    AQString ret_string = aqstring_new_from_utf32((AQUInt*)string,num_of_characters);
+    AQString ret_string = NULL;
+    if (string == NULL) ret_string = aqstr(""); //return empty string --add alloc--
+    if (string != NULL) ret_string = aqstring_new_from_utf32((AQUInt*)string,num_of_characters);
     free(string);
     return ret_string;
 }
@@ -422,12 +461,608 @@ DeimosStatus deimos_output_double(DeimosFile file, AQDouble value) {
     return DeimosSuccess;
 }
 
+static AQBool deimos_internal_is_little_endian(void) {
+    AQUShort n = 0x1;
+    return *(AQByte*)&n == 1;
+}
+
+static void deimos_internal_swap_bytes(AQByte* ptr, AQULong size) {
+    AQULong i = 0;
+    while (i < size / 2) {
+        AQByte t = ptr[i];
+        ptr[i] = ptr[size - 1 - i];
+        ptr[size - 1 - i] = t;
+        i++;
+    }
+}
+
+static DeimosStatus deimos_internal_write_bytes(DeimosFile file, AQAny data, AQULong size) {
+    AQByte buffer[16];
+    memcpy(buffer, data, size);
+    if (deimos_internal_is_little_endian()) {
+        deimos_internal_swap_bytes(buffer, size);
+    }
+    if (deimos_internal_fwrite(file, buffer, size, 1) != 1) {
+        return DeimosFailure;
+    }
+    return DeimosSuccess;
+}
+
+static DeimosStatus deimos_internal_read_bytes(DeimosFile file, AQAny data, AQULong size) {
+    AQByte buffer[16];
+    if (deimos_internal_fread(file, buffer, size, 1) != 1) {
+        return DeimosFailure;
+    }
+    if (deimos_internal_is_little_endian()) {
+        deimos_internal_swap_bytes(buffer, size);
+    }
+    memcpy(data, buffer, size);
+    return DeimosSuccess;
+}
+
 AQByte deimos_get_binary_byte(DeimosFile file) {
-    return deimos_internal_fgetc(file);
+    AQByte value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQByte)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQSByte deimos_get_binary_sbyte(DeimosFile file) {
+    AQSByte value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQSByte)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQShort deimos_get_binary_short(DeimosFile file) {
+    AQShort value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQShort)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQUShort deimos_get_binary_ushort(DeimosFile file) {
+    AQUShort value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQUShort)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQInt deimos_get_binary_integer(DeimosFile file) {
+    AQInt value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQInt)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQUInt deimos_get_binary_uinteger(DeimosFile file) {
+    AQUInt value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQUInt)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQLong deimos_get_binary_long(DeimosFile file) {
+    AQLong value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQLong)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQULong deimos_get_binary_ulong(DeimosFile file) {
+    AQULong value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQULong)) == DeimosFailure) return 0;
+    return value;
+}
+
+AQFloat deimos_get_binary_float(DeimosFile file) {
+    AQFloat value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQFloat)) == DeimosFailure) return 0.0f;
+    return value;
+}
+
+AQDouble deimos_get_binary_double(DeimosFile file) {
+    AQDouble value;
+    if (deimos_internal_read_bytes(file, &value, sizeof(AQDouble)) == DeimosFailure) return 0.0;
+    return value;
 }
 
 DeimosStatus deimos_output_binary_byte(DeimosFile file, AQByte byte) {
     if (deimos_internal_fputc(byte,file) == EOF) return DeimosFailure;
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_sbyte(DeimosFile file, AQSByte value) {
+    if (deimos_internal_fputc(value, file) == EOF) return DeimosFailure;
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_short(DeimosFile file, AQShort value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQShort));
+}
+
+DeimosStatus deimos_output_binary_ushort(DeimosFile file, AQUShort value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQUShort));
+}
+
+DeimosStatus deimos_output_binary_integer(DeimosFile file, AQInt value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQInt));
+}
+
+DeimosStatus deimos_output_binary_uinteger(DeimosFile file, AQUInt value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQUInt));
+}
+
+DeimosStatus deimos_output_binary_long(DeimosFile file, AQLong value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQLong));
+}
+
+DeimosStatus deimos_output_binary_ulong(DeimosFile file, AQULong value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQULong));
+}
+
+DeimosStatus deimos_output_binary_float(DeimosFile file, AQFloat value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQFloat));
+}
+
+DeimosStatus deimos_output_binary_double(DeimosFile file, AQDouble value) {
+    return deimos_internal_write_bytes(file, &value, sizeof(AQDouble));
+}
+
+AQDataStructure deimos_get_binary_aqds(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag flag = deimos_get_binary_uinteger(file);
+    deimos_retreat_file_position(file,sizeof(AQDataStructureFlag));
+    switch (flag) {
+        case AQMTAContainerFlag:
+            return (AQDataStructure)deimos_get_binary_mta_container(file);
+        case AQStringFlag:
+            return (AQDataStructure)deimos_get_binary_string(file);
+        case AQMultiTypeArrayFlag:
+            return (AQDataStructure)deimos_get_binary_mta(file);
+        case AQArrayFlag:
+            return (AQDataStructure)deimos_get_binary_array(file);
+        case AQListFlag:
+            return (AQDataStructure)deimos_get_binary_list(file);
+        case AQStoreFlag:
+            return (AQDataStructure)deimos_get_binary_store(file);
+        case AQArrayStoreFlag:
+            return (AQDataStructure)deimos_get_binary_arraystore(file);
+        default:
+            return NULL;
+    }
+}
+
+AQMTAContainer* deimos_get_binary_mta_container(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag ds_flag = (AQDataStructureFlag)deimos_get_binary_uinteger(file);
+    if (ds_flag != AQMTAContainerFlag)
+     return NULL;
+    AQTypeFlag type_flag = (AQTypeFlag)deimos_get_binary_uinteger(file);
+    AQMTAContainer* container = aq_new(AQMTAContainer, deimos_get_allocator(file));
+    if (container == NULL) return NULL;
+    container->flag = AQMTAContainerFlag;
+    container->type = type_flag;
+    switch (type_flag) {
+        case AQByteFlag:
+            container->AQByteVal = deimos_get_binary_byte(file);
+            break;
+        case AQSByteFlag:
+            container->AQSByteVal = deimos_get_binary_sbyte(file);
+            break;
+        case AQShortFlag:
+            container->AQShortVal = deimos_get_binary_short(file);
+            break;
+        case AQUShortFlag:
+            container->AQUShortVal = deimos_get_binary_ushort(file);
+            break;
+        case AQIntFlag:
+            container->AQIntVal = deimos_get_binary_integer(file);
+            break;
+        case AQUIntFlag:
+            container->AQUIntVal = deimos_get_binary_uinteger(file);
+            break;
+        case AQLongFlag:
+            container->AQLongVal = deimos_get_binary_long(file);
+            break;
+        case AQULongFlag:
+            container->AQULongVal = deimos_get_binary_ulong(file);
+            break;
+        case AQFloatFlag:
+            container->AQFloatVal = deimos_get_binary_float(file);
+            break;
+        case AQDoubleFlag:
+            container->AQDoubleVal = deimos_get_binary_double(file);
+            break;
+        case AQAnyFlag:
+        default:
+            aq_free(container, deimos_get_allocator(file));
+            return NULL;
+    }
+    return container;
+}
+
+AQString deimos_get_binary_string(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag flag = (AQDataStructureFlag)deimos_get_binary_uinteger(file);
+    if (flag != (AQULong)AQStringFlag) return NULL;
+    AQULong length = deimos_get_binary_ulong(file);
+    if (length == 0)
+     return aqstring_new_with_allocator(1, deimos_get_allocator(file));
+    AQString string = aqstring_new_with_allocator(length + 1, deimos_get_allocator(file));
+    if (string == NULL) return NULL;
+    if (deimos_internal_fread(file, aqstring_get_c_string(string), 1, length) != length) {
+        aqstring_destroy(string);
+        return NULL;
+    }
+    return string;
+}
+
+AQMultiTypeArray deimos_get_binary_mta(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag ds_flag = (AQDataStructureFlag)deimos_get_binary_uinteger(file);
+    if (ds_flag != AQMultiTypeArrayFlag)
+     return NULL;
+    AQUInt num_type_blocks = deimos_get_binary_uinteger(file);
+    AQMultiTypeArray mta = aq_new_mta(deimos_get_allocator(file));
+    if (mta == NULL) return NULL;
+    AQUInt b = 0;
+    while (b < num_type_blocks) {
+        AQTypeFlag type_flag = (AQTypeFlag)deimos_get_binary_uinteger(file);
+        AQULong length = deimos_get_binary_ulong(file);
+        if (type_flag < AQByteFlag || type_flag > AQDoubleFlag) {
+            aqmta_destroy(mta);
+            return NULL;
+        }
+        switch(type_flag) {
+            case AQByteFlag:    aq_mta_add_space(AQByte,mta,length); break;
+            case AQSByteFlag:   aq_mta_add_space(AQSByte,mta,length); break;
+            case AQShortFlag:   aq_mta_add_space(AQShort,mta,length); break;
+            case AQUShortFlag:  aq_mta_add_space(AQUShort,mta,length); break;
+            case AQIntFlag:     aq_mta_add_space(AQInt,mta,length); break;
+            case AQUIntFlag:    aq_mta_add_space(AQUInt,mta,length); break;
+            case AQLongFlag:    aq_mta_add_space(AQLong,mta,length); break;
+            case AQULongFlag:   aq_mta_add_space(AQULong,mta,length); break;
+            case AQFloatFlag:   aq_mta_add_space(AQFloat,mta,length); break;
+            case AQDoubleFlag:  aq_mta_add_space(AQDouble,mta,length); break;
+        }
+        AQAny buffer = aqmta_get_buffer_for_type(mta,type_flag);
+        AQULong element_size = 0;
+        switch(type_flag) {
+            case AQByteFlag:    element_size = sizeof(AQByte); break;
+            case AQSByteFlag:   element_size = sizeof(AQSByte); break;
+            case AQShortFlag:   element_size = sizeof(AQShort); break;
+            case AQUShortFlag:  element_size = sizeof(AQUShort); break;
+            case AQIntFlag:     element_size = sizeof(AQInt); break;
+            case AQUIntFlag:    element_size = sizeof(AQUInt); break;
+            case AQLongFlag:    element_size = sizeof(AQLong); break;
+            case AQULongFlag:   element_size = sizeof(AQULong); break;
+            case AQFloatFlag:   element_size = sizeof(AQFloat); break;
+            case AQDoubleFlag:  element_size = sizeof(AQDouble); break;
+        }
+        AQByte* byte_ptr = (AQByte*)buffer;
+        AQULong j = 0; 
+        while (j < length) {
+            if (deimos_internal_read_bytes(file, byte_ptr + (j * element_size), element_size) == DeimosFailure) {
+                aqmta_destroy(mta);
+                return NULL;
+            }
+            j++;
+        }
+        aqmta_set_num_of_items(mta,type_flag,length);
+        b++;
+    }
+    return mta;
+}
+
+AQArray deimos_get_binary_array(DeimosFile file) {
+    AQDataStructureFlag flag = (AQDataStructureFlag)deimos_get_binary_uinteger(file);
+    if (flag != AQArrayFlag)
+     return NULL;
+    AQULong length = deimos_get_binary_ulong(file);
+    AQArray array = aq_new_array(deimos_get_allocator(file));
+    if (array == NULL) return NULL;
+    AQULong i = 0;
+    while (i < length) {
+        AQDataStructure item = deimos_get_binary_aqds(file);
+        if (item == NULL) goto destroy;
+        if (aqarray_add_item(array,item) == AQFailureValue) {
+           destroy: 
+            aq_array_foreach(index,array) {
+                AQDataStructure item = aqarray_get_item(array,index);
+                if (aqds_get_flag(item) == AQMTAContainerFlag) {
+                    aq_free(item,deimos_get_allocator(file));
+                } else {
+                    aq_destroy(item);
+                }
+            }
+            aqarray_destroy(array);
+            aq_destroy(item);
+            return NULL;
+        }
+        i++;
+    }
+    return array;
+}
+
+AQList deimos_get_binary_list(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag flag = (AQDataStructureFlag)deimos_get_binary_uinteger(file);
+    if (flag != AQListFlag)
+     return NULL;
+    AQULong length = deimos_get_binary_ulong(file);
+    AQList list = aqlist_new_with_allocator(deimos_get_allocator(file));
+    if (list == NULL) return NULL;
+    AQULong i = 0;
+    while ( i < length) {
+        AQDataStructure item = deimos_get_binary_aqds(file);
+        if (item == NULL) goto destroy;
+        if (aqlist_add_item(list, item) == AQFailureValue) {   
+       destroy:
+            aq_list_foreach(node,list) {
+                AQDataStructure item = aqlist_get_item(node);
+                if (aqds_get_flag(item) == AQMTAContainerFlag) {
+                    aq_free(item,deimos_get_allocator(file));
+                } else {
+                    aq_destroy(item);
+                }
+            }
+            aqlist_destroy(list);
+            aq_destroy(item);
+            return NULL;     
+        }
+        i++;
+    }
+    return list;
+}
+
+AQStore deimos_get_binary_store(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag flag = (AQDataStructureFlag)deimos_get_binary_uinteger(file);
+    if (flag != AQStoreFlag) return NULL;
+    AQULong length = deimos_get_binary_ulong(file);
+    AQStore store = aqstore_new_with_allocator(deimos_get_allocator(file));
+    if (store == NULL) return NULL;
+    AQULong i = 0;
+    while ( i < length) {
+        AQString label = deimos_get_binary_string(file);
+        if (label == NULL) goto destroy;
+        AQDataStructure item = deimos_get_binary_aqds(file);
+        if (item == NULL) goto destroy;
+        if (aqstore_add_item(store, item, aqstring_get_c_string(label)) == AQFailureValue) {
+           destroy:
+            aq_store_foreach(node,store) {
+                AQDataStructure item = aqlist_get_item(node);
+                if (aqds_get_flag(item) == AQMTAContainerFlag) {
+                    aq_free(item,deimos_get_allocator(file));
+                } else {
+                    aq_destroy(item);
+                }
+            }
+            aqstring_destroy(label);
+            aq_destroy(item);
+            aqstore_destroy(store);
+            return NULL;
+        }
+        aqstring_destroy(label);
+        i++;
+    }
+    return store;
+}
+
+AQArrayStore deimos_get_binary_arraystore(DeimosFile file) {
+    if (file == NULL) return NULL;
+    AQDataStructureFlag flag = deimos_get_binary_uinteger(file);
+    if (flag != AQArrayStoreFlag) 
+     return NULL;
+    AQULong index = deimos_get_binary_ulong(file);
+    AQStore store = deimos_get_binary_store(file); //if store is null, set_store will return fail
+    AQArrayStore array_store = 
+     aqarraystore_new_with_allocator(deimos_get_allocator(file));
+    if (array_store == NULL) goto destroy;
+    if (aqarraystore_set_index(array_store,index) == AQFailureValue) goto destroy;
+    if (aqarraystore_set_store(array_store,store) == AQFailureValue) {
+       destroy: 
+        if (store != NULL) {
+            aq_store_foreach(node,store) {
+                AQDataStructure item = aqlist_get_item(node);
+                if (aqds_get_flag(item) == AQMTAContainerFlag) {
+                    aq_free(item,deimos_get_allocator(file));
+                } else {
+                    aq_destroy(item);
+                }
+            }
+        }
+        aqstore_destroy(store);
+        aqarraystore_destroy(array_store);
+        return NULL;
+    }
+    return array_store;
+}
+
+DeimosStatus deimos_output_binary_aqds(DeimosFile file, AQDataStructure ds) {
+    if (file == NULL || ds == NULL) return DeimosFailure;
+    switch (aqds_get_flag(ds)) {
+        case AQMTAContainerFlag:
+            return deimos_output_binary_mta_container(file, (AQMTAContainer*)ds);
+        case AQStringFlag:
+            return deimos_output_binary_string(file, (AQString)ds);
+        case AQMultiTypeArrayFlag:
+            return deimos_output_binary_mta(file, (AQMultiTypeArray)ds);
+        case AQArrayFlag:
+            return deimos_output_binary_array(file, (AQArray)ds);
+        case AQListFlag:
+            return deimos_output_binary_list(file, (AQList)ds);
+        case AQStoreFlag:
+            return deimos_output_binary_store(file, (AQStore)ds);
+        case AQArrayStoreFlag:
+            return deimos_output_binary_arraystore(file, (AQArrayStore)ds);
+        default:
+            return DeimosFailure; // Unsupported structure
+    }
+}
+
+DeimosStatus deimos_output_binary_mta_container(DeimosFile file, AQMTAContainer* container) {
+    if (file == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQMTAContainerFlag) == DeimosFailure)
+     return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)container->type) == DeimosFailure)
+     return DeimosFailure;
+    switch (container->type) {
+        case AQByteFlag:
+            if (deimos_output_binary_byte(file, container->AQByteVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQSByteFlag:
+            if (deimos_output_binary_sbyte(file, container->AQSByteVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQShortFlag:
+            if (deimos_output_binary_short(file, container->AQShortVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQUShortFlag:
+            if (deimos_output_binary_ushort(file, container->AQUShortVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQIntFlag:
+            if (deimos_output_binary_integer(file, container->AQIntVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQUIntFlag:
+            if (deimos_output_binary_uinteger(file, container->AQUIntVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQLongFlag:
+            if (deimos_output_binary_long(file, container->AQLongVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQULongFlag:
+            if (deimos_output_binary_ulong(file, container->AQULongVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQFloatFlag:
+            if (deimos_output_binary_float(file, container->AQFloatVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQDoubleFlag:
+            if (deimos_output_binary_double(file, container->AQDoubleVal) == DeimosFailure) return DeimosFailure;
+            break;
+        case AQAnyFlag:
+        default:
+            return DeimosFailure;
+    }
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_string(DeimosFile file, AQString string) {
+    if (file == NULL || string == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQStringFlag) == DeimosFailure)
+     return DeimosFailure;
+    AQULong length = aqstring_get_size(string);
+    if (deimos_output_binary_ulong(file, length) == DeimosFailure)
+     return DeimosFailure;    
+    if (deimos_internal_fwrite(file, aqstring_get_c_string(string), 1, length) != length)
+     return DeimosFailure;
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_mta(DeimosFile file, AQMultiTypeArray mta) {
+    if (file == NULL || mta == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQMultiTypeArrayFlag) == DeimosFailure)
+     return DeimosFailure;
+    AQUInt num_type_blocks = 0;
+    AQInt i = 0;
+    while (i < 10) { 
+        if (aqmta_get_num_of_items(mta,i+1) > 0) {
+            num_type_blocks++;
+        }
+        i++;
+    }
+    if (deimos_output_binary_uinteger(file, num_type_blocks) == DeimosFailure)
+     return DeimosFailure;
+    i = 0; 
+    while (i < 10) {
+        AQULong count = aqmta_get_num_of_items(mta,i+1);
+        if (count == 0) {
+            i++;
+            continue;
+        }
+        if (deimos_output_binary_uinteger(file, (AQUInt)(i + 1)) == DeimosFailure)
+         return DeimosFailure;
+        if (deimos_output_binary_ulong(file, count) == DeimosFailure)
+         return DeimosFailure;
+        AQAny buffer = aqmta_get_buffer_for_type(mta,i+1);
+        AQULong element_size = 0;
+        switch(i + 1) {
+            case AQByteFlag:    element_size = sizeof(AQByte); break;
+            case AQSByteFlag:   element_size = sizeof(AQSByte); break;
+            case AQShortFlag:   element_size = sizeof(AQShort); break;
+            case AQUShortFlag:  element_size = sizeof(AQUShort); break;
+            case AQIntFlag:     element_size = sizeof(AQInt); break;
+            case AQUIntFlag:    element_size = sizeof(AQUInt); break;
+            case AQLongFlag:    element_size = sizeof(AQLong); break;
+            case AQULongFlag:   element_size = sizeof(AQULong); break;
+            case AQFloatFlag:   element_size = sizeof(AQFloat); break;
+            case AQDoubleFlag:  element_size = sizeof(AQDouble); break;
+        }
+        AQByte* byte_ptr = (AQByte*)buffer;
+        AQULong j = 0;
+        while (j < count) {
+            if (deimos_internal_write_bytes(file, byte_ptr + (j * element_size), element_size) == DeimosFailure)
+             return DeimosFailure;
+            j++; 
+        }
+        i++;
+    }
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_array(DeimosFile file, AQArray array) {
+    if (file == NULL || array == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQArrayFlag) == DeimosFailure) 
+     return DeimosFailure;
+    AQULong length = aqarray_get_num_of_items(array);
+    if (deimos_output_binary_ulong(file, length) == DeimosFailure)
+     return DeimosFailure;
+    AQULong i = 0;
+    while ( i < length) {
+        AQAny item = aqarray_get_item(array, i);
+        if (item == NULL) return DeimosFailure; //binary serialization requires no NULLs in arrays
+        if (deimos_output_binary_aqds(file, (AQDataStructure)item) == DeimosFailure)
+         return DeimosFailure;
+        i++; 
+    }
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_list(DeimosFile file, AQList list) {
+    if (file == NULL || list == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQListFlag) == DeimosFailure)
+     return DeimosFailure;
+    AQULong length = aqlist_num_of_nodes(list);
+    if (deimos_output_binary_ulong(file, length) == DeimosFailure)
+     return DeimosFailure;
+    aq_list_foreach(node,list) {
+        AQAny item = aqlist_get_item(node);
+        if (item == NULL) return DeimosFailure;
+        if (deimos_output_binary_aqds(file, (AQDataStructure)item) == DeimosFailure)
+         return DeimosFailure;
+    }
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_store(DeimosFile file, AQStore store) {
+    if (file == NULL || store == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQStoreFlag) == DeimosFailure)
+     return DeimosFailure;
+    AQULong length = aqstore_num_of_items(store);
+    if (deimos_output_binary_ulong(file, length) == DeimosFailure)
+     return DeimosFailure;
+    aq_store_foreach(node, store) {
+        AQString label = aqstore_label_from_list_node(node);
+        if (deimos_output_binary_string(file, label) == DeimosFailure)
+         return DeimosFailure;
+        AQAny item = aqlist_get_item(node);
+        if (item == NULL) return DeimosFailure;
+        if (deimos_output_binary_aqds(file, (AQDataStructure)item) == DeimosFailure)
+         return DeimosFailure;
+    }
+    return DeimosSuccess;
+}
+
+DeimosStatus deimos_output_binary_arraystore(DeimosFile file, AQArrayStore array_store) {
+    if (file == NULL || array_store == NULL) return DeimosFailure;
+    if (deimos_output_binary_uinteger(file, (AQUInt)AQArrayStoreFlag) == DeimosFailure) 
+     return DeimosFailure;
+    if (deimos_output_binary_ulong(file, aqarraystore_get_index(array_store)) == DeimosFailure) 
+     return DeimosFailure;
+    if (deimos_output_binary_store(file, aqarraystore_get_store(array_store)) == DeimosFailure) 
+     return DeimosFailure;
     return DeimosSuccess;
 }
 

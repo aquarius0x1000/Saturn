@@ -1,8 +1,6 @@
 #ifndef prometheus_h
 #define prometheus_h
 
-#include "deimos.h"
-
 typedef enum {
   PrometheusBlockNotDone = 0,
   PrometheusBlockDone = 1

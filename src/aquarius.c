@@ -239,6 +239,10 @@ AQArray aqarray_new_with_base_size_with_allocator(AQULong base_size, AQAllocator
     array->destroyer = (AQDestroyerLambda)aqarray_destroy;
     array->allocator = allocator;
     array->items = aq_make_c_array(base_size, AQAny, allocator);
+    if (array->items == NULL) {
+        aqarray_destroy(array);
+        return NULL;
+    }
     array->num_of_items = base_size;
     return array;
 }
@@ -386,6 +390,11 @@ AQString aqstring_new_with_allocator(AQULong size_in_bytes, AQAllocator allocato
     string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = size_in_bytes;
     string->data = aq_make_c_array(string->size_in_bytes, AQChar, allocator);
+    if (string->data == NULL) {
+        string->allocator = allocator;
+        aqstring_destroy(string);
+        return NULL;
+    }
     string->data[string->size_in_bytes-1] = '\0';
     string->size_in_bytes -= 1; //not counting '\0'
     string->size_in_characters = -1;
@@ -495,10 +504,16 @@ AQString aqstring_new_from_buffer_with_allocator(const AQChar* text,
   AQULong size_in_bytes, AQAllocator allocator) {
     if (text == NULL) return NULL; 
     AQString string = aq_new(struct AQString_s, allocator);
+    if (string == NULL) return NULL;
     string->flag = AQStringFlag;
     string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = size_in_bytes;
     string->data = aq_make_c_array(string->size_in_bytes, AQChar, allocator);
+    if (string->data == NULL) {
+        string->allocator = allocator;
+        aqstring_destroy(string);
+        return NULL;
+    }
     string->data[string->size_in_bytes-1] = '\0';
     AQInt i = 0;
     while ( i < string->size_in_bytes-1 ) {
@@ -518,11 +533,17 @@ AQString aqstring_new_from_c_string(const AQChar* text) {
 AQString aqstring_new_from_c_string_with_allocator(const AQChar* text, AQAllocator allocator) {
     if (text == NULL) return NULL; 
     AQString string = aq_new(struct AQString_s, allocator);
+    if (string == NULL) return NULL;
     string->flag = AQStringFlag;
     string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = strlen(text);
     string->data =
      aq_make_c_array(string->size_in_bytes+1, AQChar, allocator);
+    if (string->data == NULL) {
+        string->allocator = allocator;
+        aqstring_destroy(string);
+        return NULL;
+    } 
     strcpy(string->data, text);
     string->size_in_characters = -1;
     string->allocator = allocator;
@@ -537,10 +558,16 @@ AQString aqstring_new_from_two_strings_with_allocator(AQString a,
   AQString b, AQAllocator allocator) {
     if (a == NULL || b == NULL) return NULL;  
     AQString string = aq_new(struct AQString_s, allocator);
+    if (string == NULL) return NULL;
     string->flag = AQStringFlag;
     string->destroyer = (AQDestroyerLambda)aqstring_destroy;
     string->size_in_bytes = a->size_in_bytes + b->size_in_bytes;
     string->data = aq_make_c_array(string->size_in_bytes+1, AQChar, allocator);
+    if (string->data == NULL) {
+        string->allocator = allocator;
+        aqstring_destroy(string);
+        return NULL;
+    }
     AQInt i = 0;
     AQInt j = 0;
     while ( j < a->size_in_bytes ) {
@@ -560,8 +587,79 @@ AQString aqstring_new_from_two_strings_with_allocator(AQString a,
     return string;
 }
 
+AQString aqstring_new_from_mtastackbuffer_with_allocator(AQMTAStackBuffer stack,
+ AQAllocator allocator);
+
+AQString aqstring_new_from_mtastackbuffer(AQMTAStackBuffer stack) {
+    return aqstring_new_from_mtastackbuffer_with_allocator(stack,aqmem_default_allocator());
+}
+
+AQString aqstring_new_from_mtastackbuffer_with_allocator(AQMTAStackBuffer stack,
+ AQAllocator allocator) {
+    AQChar c_string[100];
+    AQString base_string = NULL;
+    AQString new_string = NULL;
+    aq_mta_define_itemvar(item);
+    while (!aqmtastackbuffer_is_empty(stack)) {
+        switch (type_of_item) {
+            case AQSByteFlag:
+             aqmtaget(AQLong,item) = (AQLong)aqmtaget(AQSByte,item);
+            case AQShortFlag:
+             aqmtaget(AQLong,item) = (AQLong)aqmtaget(AQShort,item);
+            case AQIntFlag:
+             aqmtaget(AQLong,item) = (AQLong)aqmtaget(AQInt,item);
+            case AQLongFlag:
+             snprintf(c_string,100,"%lld",aqmtaget(AQLong,item));
+             new_string = 
+              aqstring_new_from_c_string_with_allocator(c_string,allocator);
+             break;
+
+            case AQByteFlag:
+             aqmtaget(AQULong,item) = (AQULong)aqmtaget(AQByte,item);
+            case AQUShortFlag:
+             aqmtaget(AQULong,item) = (AQULong)aqmtaget(AQUShort,item);
+            case AQUIntFlag:
+             aqmtaget(AQULong,item) = (AQULong)aqmtaget(AQUInt,item);
+            case AQULongFlag:
+             snprintf(c_string,100,"%llu",aqmtaget(AQULong,item));
+             new_string = 
+              aqstring_new_from_c_string_with_allocator(c_string,allocator);
+             break;
+            
+            case AQFloatFlag:
+             aqmtaget(AQDouble,item) = (AQDouble)aqmtaget(AQFloat,item);
+            case AQDoubleFlag:
+             snprintf(c_string,100,"%f",aqmtaget(AQDouble,item));
+             new_string = 
+              aqstring_new_from_c_string_with_allocator(c_string,allocator);
+             break;
+             
+            case AQAnyFlag:
+             if (aqds_get_flag(aqmtaget(AQAny,item)) == AQStringFlag) {
+                 new_string =
+                  aqstring_new_from_c_string_with_allocator(
+                      aqstring_get_c_string(aqmtaget(AQAny,item)),allocator);
+                aq_destroy(aqmtaget(AQAny,item));  
+             }
+             break;
+            
+            default:
+             new_string = NULL;
+             break;
+        }
+        if (new_string == NULL) continue;
+        base_string = 
+         (base_string == NULL) ? new_string :
+          aqstring_append(base_string,new_string);
+        if (base_string != new_string)
+         aq_destroy(new_string);  
+    }
+    aq_destroy(stack);
+    return NULL;     
+}
+
 AQStatus aqstring_destroy(AQString string) {
-    if ( string == NULL ) return AQFailureValue;
+    if (string == NULL) return AQFailureValue;
     AQStatus status = AQSuccessValue;
     if (aq_free(string->data, string->allocator) == AQFailureValue)
      status = AQFailureValue;
@@ -688,15 +786,16 @@ loop:
 }
 
 AQByte aqstring_get_byte(AQString string, AQULong index) {
-    if ( index > string->size_in_bytes ) return 0;
-    if ( index < 0 ) return 0;
+    if (string == NULL) return 0;    
+    if (index > string->size_in_bytes) return 0;
+    if (index < 0) return 0;
     return (AQByte)string->data[index];
 }
 
 AQStatus aqstring_set_byte(AQString string, AQULong index, AQByte byte) {
     if (string == NULL) return AQFailureValue;
-    if ( index > string->size_in_bytes ) return AQFailureValue;
-    if ( index < 0 ) return AQFailureValue;
+    if (index > string->size_in_bytes) return AQFailureValue;
+    if (index < 0) return AQFailureValue;
     string->data[index] = (AQChar)byte;
     return AQSuccessValue; 
 }
@@ -723,7 +822,8 @@ AQBool aqstring_are_equal(AQString a, AQString b) {
 AQChar* aqstring_convert_to_c_string(AQString string) {
     if (string == NULL) return NULL;
     AQChar* str = string->data;
-    aq_free(string,string->allocator);
+    if (aq_free(string,string->allocator) == AQFailureValue)
+     return NULL;
     return str;
 }
 
@@ -963,7 +1063,7 @@ AQList aqlist_new_with_allocator(AQAllocator allocator) {
 }
 
 AQList aqlist_new_from_array(AQAny array,
-  AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size) {
+ AQGetDataFromArrayLambda GetDataFromArrayLambda, AQULong size) {
     return aqlist_new_from_array_with_allocator(array,GetDataFromArrayLambda,size,aqmem_default_allocator());
 }
 
@@ -971,6 +1071,7 @@ AQList aqlist_new_from_array_with_allocator(AQAny array,
  AQGetDataFromArrayLambda GetDataFromArrayLambda,
   AQULong size, AQAllocator allocator) {
     AQList list = aq_new_list(allocator);
+    if (list == NULL) return NULL;
     if (!aqlist_copy_from_array(list,
      array, GetDataFromArrayLambda, size)) return NULL;
     return list;
@@ -995,7 +1096,7 @@ AQStatus aqlist_destroy(AQList list) {
         if (aqlist_destroy_node(list,list->first) == AQFailureValue)
          status = AQFailureValue;
     }
-    if (aq_free(list,list->allocator)== AQFailureValue)
+    if (aq_free(list,list->allocator) == AQFailureValue)
      status = AQFailureValue;
     return status;
 }
@@ -1061,12 +1162,14 @@ AQListNode aqlist_add_item(AQList list, AQAny item) {
     if ( list->num_of_nodes == 0 ) {
         list->first =
          aq_new(struct AQListNode_s,list->allocator);
+        if (list->first == NULL) return NULL;
         list->first->before = NULL;
         list->first->after = NULL;
         list->last = list->first;
     } else {
         list->last->after =
          aq_new(struct AQListNode_s,list->allocator);
+        if (list->last->after == NULL) return NULL;  
         list->last->after->before = list->last;
         list->last->after->after = NULL;
         list->last = list->last->after;
@@ -1269,6 +1372,10 @@ AQStack aqstack_new_with_allocator(AQAllocator allocator) {
     stack->flag = AQStackFlag;
     stack->destroyer = (AQDestroyerLambda)aqstack_destroy;
     stack->list = aq_new_list(allocator);
+    if (stack->list == NULL) {
+        aq_free(stack,allocator);
+        return NULL;
+    }
     return stack;
 }
 
@@ -1336,6 +1443,10 @@ AQStackBuffer aqstackbuffer_new_with_allocator(AQAllocator allocator) {
     stack->index = 0;
     stack->count = 0;
     stack->buffer = aq_new_array(allocator);
+    if (stack->buffer == NULL) {
+        aq_free(stack,allocator);
+        return NULL;
+    }
     return stack;
 }
 
@@ -1603,8 +1714,14 @@ AQAllocator aqmta_get_allocator(AQMultiTypeArray mta) {
  aq_mta_define_set(AQAny);
  
 AQULong aqmta_get_num_of_items(AQMultiTypeArray mta, AQTypeFlag type_flag) {
-    if (mta == NULL || type_flag < 0 || type_flag > 10) return 0;
-    return mta->num_of_items[type_flag];
+    if (mta == NULL || type_flag < 1 || type_flag > 11) return 0;
+    return mta->num_of_items[type_flag-1];
+}
+ 
+AQStatus aqmta_set_num_of_items(AQMultiTypeArray mta, AQTypeFlag type_flag, AQULong num_of_items) {
+    if (mta == NULL || type_flag < 1 || type_flag > 11) return AQFailureValue;
+    mta->num_of_items[type_flag-1] = num_of_items;
+    return AQSuccessValue;
 }
  
 AQULong aqmta_get_num_of_items_all_types(AQMultiTypeArray mta) {
@@ -1617,7 +1734,12 @@ AQULong aqmta_get_num_of_items_all_types(AQMultiTypeArray mta) {
     }  
     return num_of_items;
 }
- 
+
+AQAny aqmta_get_buffer_for_type(AQMultiTypeArray mta, AQTypeFlag type_flag) {
+    if (mta == NULL || type_flag < 1 || type_flag > 11) return 0;
+    return mta->item_arrays[type_flag-1];
+}
+
 AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index) { 
     AQInt i = 0;
     AQMTAContainer container;
@@ -1669,6 +1791,10 @@ AQMTAStackBuffer aqmtastackbuffer_new_with_allocator(AQAllocator allocator) {
     stack->flag = AQMTAStackBufferFlag;
     stack->destroyer = (AQDestroyerLambda)aqmtastackbuffer_destroy;
     stack->data_buffer = aq_new_mta(allocator);
+    if (stack->data_buffer == NULL) {
+       aq_free(stack,allocator);
+       return NULL;
+    }
     stack->type_buffer = NULL;
     stack->type_buffer_size = 0;
     stack->type_index = 0;
@@ -1698,7 +1824,7 @@ AQStatus aqmtastackbuffer_destroy(AQMTAStackBuffer stack) {
      if (aq_free(stack->type_buffer,allocator) == AQFailureValue)
       status = AQFailureValue;
     if (aq_free(stack,allocator) == AQFailureValue)
-     status = AQFailureValue;;
+     status = AQFailureValue;
     return status;
 }
 
@@ -1986,6 +2112,7 @@ static AQListNode aqinternal_store_remove_node(AQStore store, const AQChar* labe
 
 static AQListNode aqinternal_store_add_item(AQStore store, AQAny item) {
     if (store->items == NULL) store->items = aq_new_list(store->allocator);
+    if (store->items == NULL) return NULL;
     return aqlist_add_item(store->items,item);
 }
 
@@ -2000,6 +2127,7 @@ AQStatus aqstore_add_item(AQStore store, AQAny item, const AQChar* label) {
     if (store == NULL || label == NULL) return AQFailureValue;
     if ( !(aqstore_item_exists(store, label)) ) {
         AQListNode node = aqinternal_store_add_item(store,item);
+        if (node == NULL) return AQFailureValue;
         if ( !aqinternal_store_build_node(store,label,node) ) return AQFailureValue;
     } else {
         return aqinternal_store_set_item(store,item,label);
@@ -2075,8 +2203,12 @@ AQArrayStore aqarraystore_new(void) {
 
 AQArrayStore aqarraystore_new_with_allocator(AQAllocator allocator) {
     AQArrayStore array_store = aq_new(struct AQArrayStore_s,allocator);
-    array_store->store = aq_new_store(allocator);
     if (array_store == NULL) return NULL;
+    array_store->store = aq_new_store(allocator);
+    if (array_store->store == NULL) {
+        aq_free(array_store,allocator);
+        return NULL;
+    }
     array_store->flag = AQArrayStoreFlag;
     array_store->destroyer = (AQDestroyerLambda)aqarraystore_destroy;
     array_store->index = 0;
@@ -2091,7 +2223,7 @@ AQStatus aqarraystore_destroy(AQArrayStore array_store) {
      status = AQFailureValue;
     if (aq_free(array_store,allocator) == AQFailureValue)
      status = AQFailureValue;
-    return  status;
+    return status;
 }
 
 AQAllocator aqarraystore_get_allocator(AQArrayStore array_store) {
@@ -2161,18 +2293,32 @@ AQStore aqarraystore_get_store(AQArrayStore array_store) {
     return array_store->store;
 }
 
+AQStatus aqarraystore_set_store(AQArrayStore array_store, AQStore store) {
+    if (array_store == NULL || store == NULL) return AQFailureValue;
+    if (aq_destroy(array_store->store) == AQFailureValue) return AQFailureValue;
+    array_store->store = store;
+    return AQSuccessValue;
+}
+
 AQBool aqarraystore_is_empty(AQArrayStore array_store) {
     return aqstore_is_empty(array_store->store);
 }
 
 AQAny aqany_new(AQAny any, AQULong size) {
-    AQByte* ptr = malloc(size);
+    return aqany_new_with_allocator(any,size,aqmem_default_allocator());
+}
+
+AQAny aqany_new_with_allocator(AQAny any, AQULong size, AQAllocator allocator) {
+    AQByte* ptr = aq_alloc(size,allocator);
+    if (ptr == NULL) return NULL;
     memcpy(ptr, any, size);
     return ptr;
 }
 
-void aqany_destroy(AQAny any) {
+AQStatus aqany_destroy(AQAny any) {
+    if (any == NULL) return AQFailureValue;
     free(any);
+    return AQSuccessValue;
 }
 
 AQFloat aqmath_dot2(const AQFloat2 v0, const AQFloat2 v1) {
@@ -2453,7 +2599,7 @@ AQFloat4x4 aqmath_scale_matrix(AQFloat4x4 m0, AQFloat x_scale,
 
 AQFloat4 aqmath_get_quaternion_rotation(AQFloat x, AQFloat y, AQFloat z, AQFloat degrees) {
     AQFloat4 axis_angle = {x,y,z,degrees};
-    double radians = (axis_angle[3] / 180) * M_PI;
+    AQDouble radians = (axis_angle[3] / 180) * M_PI;
     AQFloat value = sin(radians / 2);
     AQFloat3 value_vec = {value,value,value,0};
     AQFloat4 quaternion = value_vec * axis_angle;

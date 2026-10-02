@@ -1,3 +1,5 @@
+#include "aquarius.h"
+#include "deimos.h"
 #include "prometheus.h"
  
 struct PrometheusDeserializer_s {

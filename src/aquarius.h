@@ -139,7 +139,7 @@ typedef enum {
   AQMTAStackBufferFlag,
   AQMTAContainerFlag,
   AQStoreFlag,
-  AQArrayStoreFlag
+  AQArrayStoreFlag,
 } AQDataStructureFlag;
  
 #define AQ_DATA_STRUCTURE_BASE_CLASS\
@@ -177,6 +177,9 @@ typedef struct {
     }; 
 } AQMTAContainer;
 
+typedef struct AQAllocatorStruct_s AQAllocatorStruct;
+typedef AQAllocatorStruct* AQAllocator;
+
 typedef AQStatus (*AQIteratorLambda)(AQAny data);
 typedef AQStatus (*AQDestroyerLambda)(AQDataStructure ds);
 typedef AQStatus (*AQByteIteratorLambda)(AQByte character);
@@ -185,14 +188,11 @@ typedef AQAny (*AQGetDataFromArrayLambda)(AQAny array, AQULong index);
 typedef AQAny (*AQAllocatorLambda)(AQAny allocation_data, AQULong size_in_bytes);
 typedef AQStatus (*AQAllocatorFreeLambda)(AQAny allocation_data, AQAny data_to_be_freed);
 
-typedef struct {
+struct AQAllocatorStruct_s {
   AQAny data;
   AQAllocatorLambda allocator_function;
   AQAllocatorFreeLambda free_function;
-} AQAllocatorStruct;
-
-typedef AQAllocatorStruct* AQAllocator;
-
+};
 
 #define aq_generic_test_does_not_have_va_args(A,B,...) B()
 #define aq_generic_test_does_not_have_va_args_not(A,B,...) A(__VA_ARGS__)
@@ -346,7 +346,6 @@ AQStatus aqstring_iterate_characters_with(AQCharacterIteratorLambda iterator, AQ
 
 #define aq_new_list(...)\
  aq_generic(aqlist_new_with_allocator,aqlist_new,__VA_ARGS__)
-
 #define aq_new_list_from_array(...) _Generic((__VA_ARGS__), \
   default: aqlist_new_from_array, \
   AQAllocator: aqlist_new_from_array_with_allocator \
@@ -443,7 +442,7 @@ AQArray aqstackbuffer_get_array(AQStackBuffer stack);
  aqmta_set_item_##type(mta,index,value)
  
 #define aq_mta_get_num_of_items(type,mta)\
- aqmta_get_num_of_items(mta,type##Flag-1)
+ aqmta_get_num_of_items(mta,type##Flag)
  
 #define aq_mta_define_itemvar(varname)\
    AQByte varname##_AQByte = 0;\
@@ -571,7 +570,9 @@ aq_mta_declare_set(AQFloat);
 aq_mta_declare_set(AQDouble);
 aq_mta_declare_set(AQAny);
 AQULong aqmta_get_num_of_items(AQMultiTypeArray mta, AQTypeFlag type_flag);
+AQStatus aqmta_set_num_of_items(AQMultiTypeArray mta, AQTypeFlag type_flag, AQULong num_of_items);
 AQULong aqmta_get_num_of_items_all_types(AQMultiTypeArray mta);
+AQAny aqmta_get_buffer_for_type(AQMultiTypeArray mta, AQTypeFlag type_flag);
 AQMTAContainer aqmta_get_container(AQMultiTypeArray mta, AQULong index);
 AQStatus aqmta_iterate_all_types_with(AQIteratorLambda iterator, AQMultiTypeArray mta);
 
@@ -681,7 +682,7 @@ AQBool aqmtastackbuffer_is_empty(AQMTAStackBuffer stack);
 AQMultiTypeArray aqmtastackbuffer_get_mta(AQMTAStackBuffer stack);
 
 
-#define aq_new_store(...) \
+#define aq_new_store(...)\
  aq_generic(aqstore_new_with_allocator,aqstore_new,__VA_ARGS__)
 #define aq_store_foreach(node,store) aq_list_foreach(node,aqstore_get_list(store))
 
@@ -720,13 +721,20 @@ AQULong aqarraystore_get_index(AQArrayStore array_store);
 AQStatus aqarraystore_set_index(AQArrayStore array_store, AQULong index);
 AQList aqarraystore_get_list(AQArrayStore array_store);
 AQStore aqarraystore_get_store(AQArrayStore array_store);
+AQStatus aqarraystore_set_store(AQArrayStore array_store, AQStore store);
 AQBool aqarraystore_is_empty(AQArrayStore array_store);
 
-#define aq_any(any) aqany_new(&any,sizeof(any))
+
+#define aq_new_any(...) _Generic((__VA_ARGS__), \
+  default: aqany_new, \
+  AQAllocator: aqany_new_with_allocator \
+)(__VA_ARGS__)
+#define aq_any(any,...) aq_new_any(&any,sizeof(any) __VA_OPT__(,) __VA_ARGS__)
 #define aq_get(type,any) *((type*)any)
 
 AQAny aqany_new(AQAny any, AQULong size);
-void aqany_destroy(AQAny any);
+AQAny aqany_new_with_allocator(AQAny any, AQULong size, AQAllocator allocator);
+AQStatus aqany_destroy(AQAny any);
 
 
 AQFloat aqmath_dot2(const AQFloat2 v0, const AQFloat2 v1);
