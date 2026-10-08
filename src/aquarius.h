@@ -333,6 +333,7 @@ AQByte aqstring_get_byte(AQString string, AQULong index);
 AQStatus aqstring_set_byte(AQString string, AQULong index, AQByte byte);
 AQString aqstring_append(AQString base_string, AQString appending_string);
 AQString aqstring_copy(AQString string);
+AQString aqstring_binary_copy(AQString string);
 AQBool aqstring_are_equal(AQString a, AQString b);
 AQChar* aqstring_convert_to_c_string(AQString string);
 AQInt aqstring_print(AQString string);

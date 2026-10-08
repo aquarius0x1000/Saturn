@@ -815,6 +815,14 @@ AQString aqstring_copy(AQString string) {
        aqstring_get_c_string(string),string->allocator);
 }
 
+AQString aqstring_binary_copy(AQString string) {
+    if (string == NULL) return NULL;
+    return 
+     aqstring_new_from_buffer_with_allocator(
+       aqstring_get_c_string(string),
+          aqstring_get_size_in_bytes(string),string->allocator);
+}
+
 AQBool aqstring_are_equal(AQString a, AQString b) {
     return (strcmp(aqstring_get_c_string(a), aqstring_get_c_string(b)) == 0);
 }
