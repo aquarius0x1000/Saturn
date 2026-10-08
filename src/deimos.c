@@ -164,8 +164,8 @@ DeimosFile deimos_open_file_with_allocator(const AQChar* filepath,
     file->flag = AQDestroyableFlag;
     file->destroyer = (AQDestroyerLambda)deimos_close_file;
     file->allocator = allocator;
-    if ( mode == DeimosReadModeFlag ) file->file_struct = fopen(filepath, "r");
-    if ( mode == DeimosWriteModeFlag ) file->file_struct = fopen(filepath, "w");
+    if ( mode == DeimosReadModeFlag ) file->file_struct = fopen(filepath, "rb");
+    if ( mode == DeimosWriteModeFlag ) file->file_struct = fopen(filepath, "wb");
     file->file_buffer = NULL;
     file->mode = mode;
     file->backing = DeimosFileBackedFlag;
